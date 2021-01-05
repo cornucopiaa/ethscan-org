@@ -248,6 +248,11 @@
                     @media screen and (max-width: 639px){ 
                         .slogan { display: none; }
                     }
+                    .mode-light { display: block; }
+                    .mode-dark { display: none; }
+                    [data-theme='dark'] .mode-light { display: none; }
+                    [data-theme='dark'] .mode-dark { display: block; }
+
                 </style>
                 <svg class="svg-logo" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 121.8 25.89">
                     <defs>
