@@ -365,7 +365,6 @@
                     {{ template "participationWarning" .}}
                 {{end}}
                 {{ template "hero" .Subtitle }}
-                {{ template "banner"}}
                 {{ if and (not .Genesis) (not .GenesisPeriod) }}
                     {{ template "preGenesis" .}}
                 {{ else if .GenesisPeriod}}
