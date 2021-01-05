@@ -241,7 +241,8 @@
                     [data-theme='dark'] .svg-logo {
                         color: #fff;
                     }
-                    .slogan { color: #595458 }
+                    
+                    .slogan { color: #595458; font-size: 16px; }
                     .slogan .link { color: #000; font-weight: bold; }
                     [data-theme='dark'] .slogan .link { color: #fff; }
                     @media screen and (max-width: 639px){ 
@@ -250,7 +251,11 @@
                 </style>
                 <svg class="svg-logo" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 121.8 25.89">
                     <defs>
-                        <style>.cls-1{fill:url(#linear-gradient);}.cls-2{fill:url(#linear-gradient-2);}.cls-3{fill:url(#linear-gradient-3);}.cls-4{fill:#fff;}</style>
+                        <style>
+                            .cls-1{fill:url(#linear-gradient);}
+                            .cls-2{fill:url(#linear-gradient-2);}
+                            .cls-3{fill:url(#linear-gradient-3);}
+                        </style>
                         <linearGradient id="linear-gradient" x1="62.09" y1="247.94" x2="-12.41" y2="214.94" gradientTransform="matrix(1, 0, 0, -1, 0, 237.5)" gradientUnits="userSpaceOnUse">
                             <stop offset="0" stop-color="#37ffb7"/>
                             <stop offset="0.61" stop-color="#82d6ff"/>
@@ -271,11 +276,11 @@
                         </g>
                     </g>
                 </svg>
-                <div class="slogan">
-                    ETH2 Explorer by <a class="link" href="https://redot.com/">redot.com</a>
-                </div>
-                
             </a>
+            <div class="slogan">
+                ETH2 Explorer by <a class="link" href="https://redot.com/">redot.com</a>
+            </div>
+        
 
             <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
                     aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
@@ -543,7 +548,7 @@
 					</div>
 				</div>
 				{{end}} -->
-        {{if .InfoBanner}}
+        <!-- {{if .InfoBanner}}
             <div id="infoBanner">
                 <div style="overflow-wrap: break-word;background-color: var(--bg-color-light);" class="d-none d-md-flex justify-content-center align-items-center p-2">
                     {{.InfoBanner}}
@@ -555,7 +560,7 @@
                     <i id="infoBannerDissBtn" class="far fa-times-circle btn" data-toggle="tooltip" data-placement="bottom" title="Dismiss" onClick="hideInfoBanner({{.InfoBanner}})"></i>
                 </div>
             </div>
-        {{end}}
+        {{end}} -->
       
         {{ template "content" . }}
     </main>
