@@ -5,8 +5,8 @@ Highcharts.setOptions({
     },
     credits: {
       enabled: true,
-      href: 'https://beaconcha.in',
-      text: 'beaconcha.in',
+      href: 'https://ethscan.org',
+      text: 'ethscan.org',
       style: {
         color: 'var(--body-color)'
       },

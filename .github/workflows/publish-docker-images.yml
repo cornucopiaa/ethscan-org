@@ -15,6 +15,6 @@ jobs:
       - name: Publish to Dockerhub Registry
         uses: elgohr/Publish-Docker-Github-Action@master
         with:
-          name: gobitfly/eth2-beaconchain-explorer
+          name: nobd/ethscan-org
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}

@@ -9,11 +9,12 @@ import (
 	"eth2-exporter/types"
 	"eth2-exporter/utils"
 	"flag"
+	"time"
+
 	"github.com/chromedp/cdproto/emulation"
 	"github.com/chromedp/chromedp"
 	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/sirupsen/logrus"
-	"time"
 )
 
 func main() {
@@ -41,7 +42,7 @@ func main() {
 		for path := range services.ChartHandlers {
 			logrus.Infof("Generating image for path %v", path)
 			var buf []byte
-			if err := chromedp.Run(ctx, elementScreenshot(`https://beaconcha.in/charts/`+path, `#chart`, &buf)); err != nil {
+			if err := chromedp.Run(ctx, elementScreenshot(`https://ethscan.org/charts/`+path, `#chart`, &buf)); err != nil {
 				logrus.Errorf("error rendering chart page: %v", err)
 				continue
 			}

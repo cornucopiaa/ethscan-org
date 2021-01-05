@@ -2,9 +2,9 @@
 
 The explorer provides a comprehensive and easy to use interface for the upcoming Eth2 beacon chain. It makes it easy to view proposed blocks, follow attestations and monitor your staking activity.
 
-[![Badge](https://github.com/gobitfly/eth2-beaconchain-explorer/workflows/Build/badge.svg)](https://github.com/gobitfly/eth2-beaconchain-explorer/actions?query=workflow%3A%22Build+%26+Publish+Docker+images%22)
-[![Gitter](https://img.shields.io/gitter/room/gobitfly/eth2-beaconchain-explorer?color=%2334D058)](https://gitter.im/gobitfly/beaconchain-explorer?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
-[![Go Report Card](https://goreportcard.com/badge/github.com/gobitfly/eth2-beaconchain-explorer)](https://goreportcard.com/report/github.com/gobitfly/eth2-beaconchain-explorer)
+[![Badge](https://github.com/nobd/ethscan-org/workflows/Build/badge.svg)](https://github.com/nobd/ethscan-org/actions?query=workflow%3A%22Build+%26+Publish+Docker+images%22)
+[![Gitter](https://img.shields.io/gitter/room/nobd/ethscan-org?color=%2334D058)](https://gitter.im/gobitfly/beaconchain-explorer?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+[![Go Report Card](https://goreportcard.com/badge/github.com/nobd/ethscan-org)](https://goreportcard.com/report/github.com/nobd/ethscan-org)
 
 ## About
 
@@ -12,7 +12,7 @@ The explorer is built using golang and utilizes a PostgreSQL database for storin
 
 ### Eth 2.0 Testnet Explorers
 
-Prysm [beaconcha.in](https://beaconcha.in)<br>
+Prysm [beaconcha.in](https://ethscan.org)<br>
 Lighthouse [lighthouse.beaconcha.in](https://lighthouse.beaconcha.in)
 
 **Warning:** The explorer is still under heavy active development. More or less everything might change without prior notice and we cannot guarantee any backwards compatibility for now. Once the eth2 ecosystem matures we will be able to provide stronger guarantees about the updatability of the explorer.
@@ -54,7 +54,7 @@ Lighthouse [lighthouse.beaconcha.in](https://lighthouse.beaconcha.in)
 
 ## Getting started
 
-We currently do not provide any pre-built binaries of the explorer. Docker images are available at https://hub.docker.com/repository/docker/gobitfly/eth2-beaconchain-explorer.
+We currently do not provide any pre-built binaries of the explorer. Docker images are available at https://hub.docker.com/repository/docker/nobd/ethscan-org.
 
 - Download the latest version of the Prysm beacon chain client and start it with the `--archive` flag set
 - Wait till the client finishes the initial sync

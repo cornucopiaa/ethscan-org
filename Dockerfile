@@ -1,14 +1,18 @@
 # The dockerfile is currently still WIP and might be broken
 FROM golang:1.15-alpine AS build-env
 RUN apk --no-cache add build-base git musl-dev linux-headers npm
-ADD . /src
-RUN cd /src && make -B all
+WORKDIR /src/
+ADD go.mod go.sum ./
+RUN go mod download -x
+ADD . ./
+RUN make -B all
 
 # final stage
 FROM alpine
-WORKDIR /app
+WORKDIR /usr/src/app
 RUN apk --no-cache add libstdc++ libgcc
-COPY --from=build-env /src/bin /app/
-COPY --from=build-env /src/phase0.yml /app/phase0.yml
-COPY  ./config-example.yml /app/config.yml
+COPY --from=build-env /src/bin /usr/src/app/
+COPY --from=build-env /src/phase0.yml /usr/src/app/phase0.yml
+COPY ./config.yml /usr/src/app/config.yml
+EXPOSE 3335
 CMD ["./explorer", "--config", "config.yml"]

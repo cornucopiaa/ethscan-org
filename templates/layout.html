@@ -10,23 +10,21 @@
 
         <meta property="og:title" content="{{.Meta.Title}}"/>
         <meta property="og:type" content="website"/>
-        <meta property="og:image" content="https://beaconcha.in/img/logo.png"/>
-        <meta property="og:image:alt" content="The beaconcha.in logo is a satelite dish expanding its signal."/>
+        <meta property="og:image" content="https://ethscan.org/img/logo.png"/>
         <meta property="og:description" content="{{.Meta.Description}}"/>
-        <meta property="og:url" content="https://beaconcha.in{{.Meta.Path}}"/>
-        <meta property="og:site_name" content="beaconcha.in"/>
+        <meta property="og:url" content="https://ethscan.org{{.Meta.Path}}"/>
+        <meta property="og:site_name" content="ethscan.org"/>
 
         <meta name="twitter:card" content="summary"/>
         <meta name="twitter:site" content="@etherchain_org"/>
         <meta name="twitter:title" content="{{.Meta.Title}}"/>
         <meta property="twitter:description" content="{{.Meta.Description}}"/>
-        <meta property="twitter:image" content="https://beaconcha.in/img/logo.png"/>
-        <meta property="twitter:image:alt" content="The beaconcha.in logo is a satelite dish expanding its signal."/>
+        <meta property="twitter:image" content="https://ethscan.org/img/logo.png"/>
 
-        <link rel="canonical" href="https://beaconcha.in{{.Meta.Path}}"/>
+        <link rel="canonical" href="https://ethscan.org{{.Meta.Path}}"/>
 
         <title>{{.Meta.Title}}</title>
-        <link rel="shortcut icon" type="image/png" href="/favicon.ico"/>
+        <link rel="shortcut icon" type="image/png" href="/img/fav/favicon-32x32.png"/>
 
         <link rel="stylesheet" href="/bundle/css/fontawesome.min.css">
 
@@ -73,7 +71,7 @@
     </header>
     <body ontouchstart="">
     <noscript>
-        <strong>We're sorry but beaconcha.in doesn't work properly without JavaScript enabled. Please enable it to
+        <strong>We're sorry but ethscan.org doesn't work properly without JavaScript enabled. Please enable it to
             continue.</strong>
     </noscript>
     <!-- Banner -->
@@ -237,7 +235,7 @@
             <a class=navbar-brand href="/">
                 <i {{ if eq .Active "index"}}style="color: var(--font-color)" {{else}}style="opacity: .7"{{end}}
                    class="fas fa-satellite-dish mr-2"></i>
-                <span class="brand-text">beaconcha.in</span>
+                <span class="brand-text">ethscan.org</span>
             </a>
 
             <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
@@ -333,10 +331,10 @@
                                 <span class="nav-icon"><i class="fas fa-project-diagram mr-2"></i></span>
                                 <span class="nav-text">Block Viz</span>
                             </a>
-                            <a ga-outbound class="dropdown-item" href="https://eth2.ethernodes.org/">
+                            <!-- <a ga-outbound class="dropdown-item" href="https://eth2.ethernodes.org/">
                                 <span class="nav-icon"><i class="fas fa-network-wired mr-2"></i></span>
                                 <span class="nav-text">Nodes</span>
-                            </a>
+                            </a> -->
                         </div>
                     </li>
                     <style>
@@ -468,10 +466,10 @@
                     </a>
                     <div class="dropdown-menu" aria-labelledby="navbarDropdown">
                     </a>
-                    <a class="dropdown-item" href="/stakingServices">
+                    <!-- <a class="dropdown-item" href="/stakingServices">
                         <span class="nav-icon"><i class="fas fa-drumstick-bite mr-2"></i></span>
                         <span class="nav-text">Staking Services</span>
-                    </a>
+                    </a>-->
                     <a class="dropdown-item" href="/ethClients">
                         <span class="nav-icon"><i class="fas fa-desktop mr-2"></i></span>
                         <span class="nav-text">Ethereum Clients</span>
@@ -481,70 +479,15 @@
                         <span class="nav-text">Educational Material</span>
                     </a>
                     <hr>
-                    <a class="dropdown-item" href="https://beaconcha.in/api/v1/docs/index.html">
+                    <a class="dropdown-item" href="https://ethscan.org/api/v1/docs/index.html">
                         <span class="nav-icon">
                             <i class="fas fa-laptop-code mr-2"></i>
                         </span>
                         <span class="nav-text">API Docs</span>
                     </a>
-                    <a class="dropdown-item" href="/pricing">
-                        <span class="nav-icon">
-                            <i class="fas fa-laptop-code mr-2"></i>
-                        </span>
-                        <span class="nav-text">API Pricing</span>
-                    </a>
                     
                     </div>
                 </li>
-                    <li class="nav-item dropdown {{ if eq .Active "more"}}active{{end}}">
-                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button"
-                           data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-							<span class="nav-icon">
-								<i class="fas fa-info mr-2"></i>
-							</span>
-                            <span class="nav-text">
-								More
-							</span>
-                        </a>
-                        <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdown">
-                            <a class="dropdown-item" href="https://apps.apple.com/at/app/beaconchain-dashboard/id1541822121">
-								<span class="nav-icon">
-									<i class="fab fa-apple mr-2"></i>
-								</span>
-                                <span class="nav-text">iOS App</span>
-                            </a>
-                            <a class="dropdown-item" href="https://play.google.com/store/apps/details?id=in.beaconcha.mobile">
-								<span class="nav-icon">
-									<i class="fab fa-android mr-2"></i>
-								</span>
-                                <span class="nav-text">Android App</span>
-                            </a>
-                            <hr>
-                          
-                            <a class="dropdown-item" href="/graffitiwall">
-								<span class="nav-icon">
-									<i class="fas fa-paint-brush mr-1"></i>
-								</span>
-                                <span class="nav-text">
-									Graffiti Wall
-								</span>
-                            </a>
-                            <a class="dropdown-item" href="/poap">
-								<span class="nav-icon">
-									<i class="fas fa-medal mr-1"></i>
-								</span>
-                                <span class="nav-text">
-									POAP
-								</span>
-                            </a>
-                            <a ga-outbound class="dropdown-item" href="https://kb.beaconcha.in">
-                                <span class="nav-icon">
-                                    <i class="fas fa-external-link-alt mr-2"></i>
-                                </span>
-                                <span class="nav-text">Knowledge Base</span>
-                            </a>
-                        </div>
-                    </li>
                 </ul>
             </div>
         </div>
@@ -581,37 +524,9 @@
     <div style="margin-top: 3rem; margin-bottom: 4.2rem;">
         <hr>
         <footer class="container">
-            <div class="row">
-                <div class="col-md-4 mb-2">
-                    <h5>Legal Notices</h5>
-                    <div class="d-flex flex-column">
-                        <a class="my-1" href="/imprint">Imprint</a>
-                    </div>
-                </div>
-                <div class="col-md-4 mb-2">
-                    <h5>Resources</h5>
-                    <div class="d-flex flex-column">
-                        <a class="my-1" href="/advertisewithus"><i class="fas fa-ad mr-2"></i>Advertise</a>
-                        <a class="my-1" href="https://shop.beaconcha.in"><i class="fas fa-shopping-cart mr-2"></i>Swag
-                            Shop</a>
-                        <a class="my-1" href="/pricing"><i class="fas fa-laptop-code mr-2"></i></i>API Pricing</a>
-                        <a class="my-1" href="https://github.com/gobitfly/eth2-beaconchain-explorer"><i
-                                    class="fab fa-github mr-2"></i>Github</a>
-                    </div>
-                </div>
-                <div class="col-md-4 mb-2">
-                    <h5>Social Media</h5>
-                    <div class="d-flex flex-column">
-                        <a class="my-1" href="https://twitter.com/etherchain_org"><i class="fab fa-twitter mr-2"></i>Twitter</a>
-                        <a class="my-1" href="https://www.reddit.com/u/etherchain/"><i class="fab fa-reddit mr-2"></i>Reddit</a>
-                        <a class="my-1" href="https://gitter.im/gobitfly/beaconchain-explorer"><i
-                                    class="fab fa-gitter"></i> Gitter Channel</a>
-                    </div>
-                </div>
-            </div>
             <div class="text-center row justify-content-center">
                 <div class="col-12">
-                    <span>© bitfly gmbh 2020 | {{.Version}} |</span>
+                    <span>ethscan.org | {{.Version}} |</span>
                     <div class="theme-switch-wrapper">
                         <label class="theme-switch" for="toggleSwitch">
                             <input type="checkbox" id="toggleSwitch"/>
@@ -759,7 +674,6 @@
         </script>
     {{end}}
 
-    <script type="text/javascript" async src="/bundle/js/revive.min.js"></script>
     </body>
     </html>
 {{end}}

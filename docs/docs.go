@@ -226,11 +226,11 @@ var doc = `{
                 "tags": [
                     "Charts"
                 ],
-                "summary": "Returns charts from the page https://beaconcha.in/charts as PNG",
+                "summary": "Returns charts from the page https://ethscan.org/charts as PNG",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Chart name (see https://github.com/gobitfly/eth2-beaconchain-explorer/blob/master/services/charts_updater.go#L20 for all available names)",
+                        "description": "Chart name (see https://github.com/nobd/ethscan-org/blob/master/services/charts_updater.go#L20 for all available names)",
                         "name": "chart",
                         "in": "path",
                         "required": true
@@ -989,8 +989,8 @@ var doc = `{
         "OAuthAccessCode": {
             "type": "oauth2",
             "flow": "accessCode",
-            "authorizationUrl": "https://beaconcha.in/user/authorize",
-            "tokenUrl": "https://beaconcha.in/user/token"
+            "authorizationUrl": "https://ethscan.org/user/authorize",
+            "tokenUrl": "https://ethscan.org/user/token"
         }
     }
 }`
@@ -1010,8 +1010,8 @@ var SwaggerInfo = swaggerInfo{
 	Host:        "",
 	BasePath:    "",
 	Schemes:     []string{},
-	Title:       "Beaconcha.in ETH2 API",
-	Description: "High performance API for querying information from the Ethereum 2.0 beacon chain\nThe API is currently free to use. A fair use policy applies. Calls are rate limited to\n10 requests / 1 minute / IP. All API results are cached for 1 minute.\nIf you required a higher usage plan please checkout https://beaconcha.in/pricing.",
+	Title:       "Ethscan.org ETH2 API",
+	Description: "High performance API for querying information from the Ethereum 2.0 beacon chain\nThe API is currently free to use. A fair use policy applies. Calls are rate limited to\n10 requests / 1 minute / IP. All API results are cached for 1 minute.",
 }
 
 type s struct{}

@@ -60,9 +60,10 @@ func SendMailRateLimited(to, subject, msg string) error {
 func SendMailSMTP(to, subject, body string) error {
 	server := utils.Config.Frontend.Mail.SMTP.Server // eg. smtp.gmail.com:587
 	host := utils.Config.Frontend.Mail.SMTP.Host     // eg. smtp.gmail.com
-	from := utils.Config.Frontend.Mail.SMTP.User     // eg. userxyz123@gmail.com
+	user := utils.Config.Frontend.Mail.SMTP.User     // eg. userxyz123@gmail.com
 	password := utils.Config.Frontend.Mail.SMTP.Password
-	auth := smtp.PlainAuth("", from, password, host)
+	auth := smtp.PlainAuth("", user, password, host)
+	from := "no-reply@eth2.redot.com"
 	msg := []byte(fmt.Sprintf("To: %s\r\nSubject: %s\r\n\r\n%s\r\n", to, subject, body))
 
 	err := smtp.SendMail(server, auth, from, []string{to}, msg)

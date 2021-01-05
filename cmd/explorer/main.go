@@ -188,7 +188,7 @@ func main() {
 
 		if !utils.Config.Frontend.OnlyAPI {
 			if utils.Config.Frontend.SiteDomain == "" {
-				utils.Config.Frontend.SiteDomain = "beaconcha.in"
+				utils.Config.Frontend.SiteDomain = "ethscan.org"
 			}
 
 			logrus.Infof("frontend database connection established")
@@ -267,8 +267,8 @@ func main() {
 			router.HandleFunc("/education", handlers.EducationServices).Methods("GET")
 			router.HandleFunc("/ethClients", handlers.EthClientsServices).Methods("GET")
 
-			router.HandleFunc("/advertisewithus", handlers.AdvertiseWithUs).Methods("GET")
-			router.HandleFunc("/advertisewithus", handlers.AdvertiseWithUsPost).Methods("POST")
+			// router.HandleFunc("/advertisewithus", handlers.AdvertiseWithUs).Methods("GET")
+			// router.HandleFunc("/advertisewithus", handlers.AdvertiseWithUsPost).Methods("POST")
 
 			// confirming the email update should not require auth
 			router.HandleFunc("/settings/email/{hash}", handlers.UserConfirmUpdateEmail).Methods("GET")
@@ -289,8 +289,8 @@ func main() {
 			signUpRouter.HandleFunc("/reset/{hash}", handlers.ResetPassword).Methods("GET")
 			signUpRouter.HandleFunc("/confirm/{hash}", handlers.ConfirmEmail).Methods("GET")
 			signUpRouter.HandleFunc("/confirmation", handlers.Confirmation).Methods("GET")
-			signUpRouter.HandleFunc("/pricing", handlers.Pricing).Methods("GET")
-			signUpRouter.HandleFunc("/pricing", handlers.PricingPost).Methods("POST")
+			// signUpRouter.HandleFunc("/pricing", handlers.Pricing).Methods("GET")
+			// signUpRouter.HandleFunc("/pricing", handlers.PricingPost).Methods("POST")
 			signUpRouter.Use(csrfHandler)
 
 			oauthRouter := router.PathPrefix("/user").Subrouter()

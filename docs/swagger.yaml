@@ -42,8 +42,7 @@ info:
     High performance API for querying information from the Ethereum 2.0 beacon chain
     The API is currently free to use. A fair use policy applies. Calls are rate limited to
     10 requests / 1 minute / IP. All API results are cached for 1 minute.
-    If you required a higher usage plan please checkout https://beaconcha.in/pricing.
-  title: Beaconcha.in ETH2 API
+  title: Ethscan.org ETH2 API
   version: "1.0"
 paths:
   /api/healthz:
@@ -176,7 +175,7 @@ paths:
   /api/v1/chart/{chart}:
     get:
       parameters:
-      - description: Chart name (see https://github.com/gobitfly/eth2-beaconchain-explorer/blob/master/services/charts_updater.go#L20 for all available names)
+      - description: Chart name (see https://github.com/nobd/ethscan-org/blob/master/services/charts_updater.go#L20 for all available names)
         in: path
         name: chart
         required: true
@@ -188,7 +187,7 @@ paths:
           description: OK
           schema:
             type: string
-      summary: Returns charts from the page https://beaconcha.in/charts as PNG
+      summary: Returns charts from the page https://ethscan.org/charts as PNG
       tags:
       - Charts
   /api/v1/epoch/{epoch}:
@@ -615,8 +614,8 @@ securityDefinitions:
     name: Authorization
     type: apiKey
   OAuthAccessCode:
-    authorizationUrl: https://beaconcha.in/user/authorize
+    authorizationUrl: https://ethscan.org/user/authorize
     flow: accessCode
-    tokenUrl: https://beaconcha.in/user/token
+    tokenUrl: https://ethscan.org/user/token
     type: oauth2
 swagger: "2.0"

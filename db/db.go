@@ -291,8 +291,7 @@ func GetEth1DepositsLeaderboard(query string, length, start uint64, orderBy, ord
 					pubkey,
 					slashed,
 					exitepoch,
-					activationepoch,
-					name
+					activationepoch
 				FROM validators
 			) as v
 		ON
