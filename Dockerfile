@@ -14,5 +14,5 @@ RUN apk --no-cache add libstdc++ libgcc
 COPY --from=build-env /src/bin /usr/src/app/
 COPY --from=build-env /src/phase0.yml /usr/src/app/phase0.yml
 COPY ./config.yml /usr/src/app/config.yml
-EXPOSE 3335
+EXPOSE 3336
 CMD ["./explorer", "--config", "config.yml"]
