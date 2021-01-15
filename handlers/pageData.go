@@ -9,7 +9,6 @@ import (
 	"eth2-exporter/version"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/gorilla/sessions"
 )
@@ -18,8 +17,8 @@ func InitPageData(w http.ResponseWriter, r *http.Request, active, path, title st
 	data := &types.PageData{
 		HeaderAd: false,
 		Meta: &types.Meta{
-			Title:       fmt.Sprintf("%v - %v - ethscan.org - %v", utils.Config.Frontend.SiteName, title, time.Now().Year()),
-			Description: "ethscan.org makes the Ethereum 2.0. beacon chain accessible to non-technical end users",
+			Title:       fmt.Sprintf("%v | Ethereum 2 (ETH 2) Blockchain Explorer", utils.Config.Frontend.SiteDomain),
+			Description: fmt.Sprintf("%v provides easy to use Ethereum 2 block explorer that allows you to search for ETH 2 addresses, transactions, prices, tokens, validators, and epochs.  ", utils.Config.Frontend.SiteDomain),
 			Path:        path,
 			GATag:       utils.Config.Frontend.GATag,
 		},
