@@ -9,16 +9,26 @@ import (
 	"eth2-exporter/version"
 	"fmt"
 	"net/http"
+	"unicode"
 
 	"github.com/gorilla/sessions"
 )
 
+func Ucfirst(str string) string {
+	for _, v := range str {
+		u := string(unicode.ToUpper(v))
+		return u + str[len(u):]
+	}
+	return ""
+}
+
 func InitPageData(w http.ResponseWriter, r *http.Request, active, path, title string) *types.PageData {
+	name := Ucfirst(utils.Config.Frontend.SiteDomain)
 	data := &types.PageData{
 		HeaderAd: false,
 		Meta: &types.Meta{
-			Title:       fmt.Sprintf("%v | Ethereum 2 (ETH 2) Blockchain Explorer", utils.Config.Frontend.SiteDomain),
-			Description: fmt.Sprintf("%v provides easy to use Ethereum 2 block explorer that allows you to search for ETH 2 addresses, transactions, prices, tokens, validators, and epochs.  ", utils.Config.Frontend.SiteDomain),
+			Title:       fmt.Sprintf("%v | Ethereum 2 (ETH 2) Blockchain Explorer", name),
+			Description: fmt.Sprintf("%v provides easy to use Ethereum 2 block explorer that allows you to search for ETH 2 addresses, transactions, prices, tokens, validators, and epochs.  ", name),
 			Path:        path,
 			GATag:       utils.Config.Frontend.GATag,
 		},
