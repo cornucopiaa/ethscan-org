@@ -22,7 +22,7 @@ func Vis(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/html")
 
-	data := InitPageData(w, r, "stats", "/viz", "Visualizations")
+	data := InitPageData(w, r, "stats", "/vis", "Visualizations")
 	data.HeaderAd = true
 
 	err = visTemplate.ExecuteTemplate(w, "layout", data)
