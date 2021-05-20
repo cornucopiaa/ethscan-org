@@ -4,15 +4,12 @@ import (
 	"encoding/hex"
 	"eth2-exporter/db"
 	ethclients "eth2-exporter/ethClients"
-	"eth2-exporter/exporter"
 	"eth2-exporter/handlers"
 	"eth2-exporter/price"
-	"eth2-exporter/rpc"
 	"eth2-exporter/services"
 	"eth2-exporter/types"
 	"eth2-exporter/utils"
 	"flag"
-	"fmt"
 	"net/http"
 	"os"
 	"time"
@@ -28,20 +25,11 @@ import (
 	"github.com/gorilla/mux"
 	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/phyber/negroni-gzip/gzip"
-	"github.com/stripe/stripe-go/v72"
 	"github.com/urfave/negroni"
 	"github.com/zesik/proxyaddr"
 )
 
 func initStripe(http *mux.Router) error {
-	if utils.Config == nil {
-		return fmt.Errorf("error no config found")
-	}
-	stripe.Key = utils.Config.Frontend.Stripe.SecretKey
-	http.HandleFunc("/stripe/create-checkout-session", handlers.StripeCreateCheckoutSession).Methods("POST")
-	http.HandleFunc("/stripe/customer-portal", handlers.StripeCustomerPortal).Methods("POST")
-	http.HandleFunc("/stripe/success", handlers.PricingSuccess).Methods("GET")
-	http.HandleFunc("/stripe/cancled", handlers.PricingCancled).Methods("GET")
 	return nil
 }
 
@@ -83,51 +71,6 @@ func main() {
 	logrus.Infof("database connection established")
 	if utils.Config.Chain.SlotsPerEpoch == 0 || utils.Config.Chain.SecondsPerSlot == 0 {
 		logrus.Fatal("invalid chain configuration specified, you must specify the slots per epoch, seconds per slot and genesis timestamp in the config file")
-	}
-
-	if utils.Config.Indexer.Enabled {
-		var rpcClient rpc.Client
-
-		if utils.Config.Indexer.Node.Type == "prysm" {
-			if utils.Config.Indexer.Node.PageSize == 0 {
-				logrus.Printf("setting default rpc page size to 500")
-				utils.Config.Indexer.Node.PageSize = 500
-			}
-			rpcClient, err = rpc.NewPrysmClient(cfg.Indexer.Node.Host + ":" + cfg.Indexer.Node.Port)
-			if err != nil {
-				logrus.Fatal(err)
-			}
-		} else if utils.Config.Indexer.Node.Type == "lighthouse" {
-			rpcClient, err = rpc.NewLighthouseClient(cfg.Indexer.Node.Host + ":" + cfg.Indexer.Node.Port)
-			if err != nil {
-				logrus.Fatal(err)
-			}
-		} else {
-			logrus.Fatalf("invalid note type %v specified. supported node types are prysm and lighthouse", utils.Config.Indexer.Node.Type)
-		}
-
-		if utils.Config.Indexer.OneTimeExport.Enabled {
-			if len(utils.Config.Indexer.OneTimeExport.Epochs) > 0 {
-				logrus.Infof("onetimeexport epochs: %+v", utils.Config.Indexer.OneTimeExport.Epochs)
-				for _, epoch := range utils.Config.Indexer.OneTimeExport.Epochs {
-					err := exporter.ExportEpoch(epoch, rpcClient)
-					if err != nil {
-						logrus.Fatal(err)
-					}
-				}
-			} else {
-				logrus.Infof("onetimeexport epochs: %v-%v", utils.Config.Indexer.OneTimeExport.StartEpoch, utils.Config.Indexer.OneTimeExport.EndEpoch)
-				for epoch := utils.Config.Indexer.OneTimeExport.StartEpoch; epoch <= utils.Config.Indexer.OneTimeExport.EndEpoch; epoch++ {
-					err := exporter.ExportEpoch(epoch, rpcClient)
-					if err != nil {
-						logrus.Fatal(err)
-					}
-				}
-			}
-			return
-		}
-
-		go exporter.Start(rpcClient)
 	}
 
 	if cfg.Frontend.Enabled {

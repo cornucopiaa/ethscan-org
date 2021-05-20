@@ -1,2 +1,3 @@
 run-local
 docker-compose.yml
+config-local.yml

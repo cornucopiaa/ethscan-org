@@ -33,6 +33,10 @@ func NewLighthouseClient(endpoint string) (*LighthouseClient, error) {
 	return client, nil
 }
 
+func (lc *LighthouseClient) GetNewBlockChan() chan *types.Block {
+	return nil
+}
+
 // GetChainHead gets the chain head from Lighthouse
 func (lc *LighthouseClient) GetChainHead() (*types.ChainHead, error) {
 	resp, err := lc.get(fmt.Sprintf("%v%v", lc.endpoint, "/beacon/head"))
@@ -499,4 +503,9 @@ type lighthouseValidatorResponse struct {
 		WithdrawalCredentials      string `json:"withdrawal_credentials"`
 	} `json:"validator"`
 	ValidatorIndex uint64 `json:"validator_index"`
+}
+
+func (pc *LighthouseClient) GetBlockStatusByEpoch(epoch uint64) ([]*types.CanonBlock, error) {
+	blocks := make([]*types.CanonBlock, 0)
+	return blocks, nil
 }

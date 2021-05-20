@@ -64,6 +64,73 @@
                 document.cookie = "currency=" + currency + ";samesite=strict;path=/"
                 window.location.reload();
             }
+            function getCookie(cname) {
+                var name = cname + "=";
+                var ca = document.cookie.split(';');
+                for(var i = 0; i < ca.length; i++) {
+                    var c = ca[i];
+                    while (c.charAt(0) == ' ') {
+                    c = c.substring(1);
+                    }
+                    if (c.indexOf(name) == 0) {
+                    return c.substring(name.length, c.length);
+                    }
+                }
+                return "";
+            }
+
+            window.addEventListener('load', function() {
+                var currentCurrency = getCookie('currency')
+                if (currentCurrency) {
+                    document.getElementById('currencyDropdown').textContent = currentCurrency
+                    document.getElementById('currencyFlagDropdown').innerHTML = "<img class='currency-flag-dropdown-image' src='/img/" + currentCurrency +  ".svg'>"
+                }
+            })
+
+            window.addEventListener('load', function () {
+                switch (getCookie('currency')) {
+                    case 'AUD':
+                        document.getElementById('currentCurrencySymbol').textContent = 'A$'
+                        document.getElementById('currentKFormattedPrice').textContent = {{.AudTruncPrice}}
+                        document.getElementById('currentCurencyPrice').textContent = {{.AudRoundPrice}}
+                        break
+	                case 'CAD':
+                        document.getElementById('currentCurrencySymbol').textContent = 'C$'
+                        document.getElementById('currentKFormattedPrice').textContent = {{.CadTruncPrice}}
+                        document.getElementById('currentCurencyPrice').textContent = {{.CadRoundPrice}}
+		                break
+	                case 'CNY':
+                        document.getElementById('currentCurrencySymbol').textContent = '¥'
+                        document.getElementById('currentKFormattedPrice').textContent = {{.CnyTruncPrice}}
+                        document.getElementById('currentCurencyPrice').textContent = {{.CnyRoundPrice}}
+		                break
+	                case 'EUR':
+                        document.getElementById('currentCurrencySymbol').textContent = '€'
+                        document.getElementById('currentKFormattedPrice').textContent = {{.EurTruncPrice}}
+                        document.getElementById('currentCurencyPrice').textContent = {{.EurRoundPrice}}
+		                break
+	                case 'GBP':
+                        document.getElementById('currentCurrencySymbol').textContent = '£'
+                        document.getElementById('currentKFormattedPrice').textContent = {{.GbpTruncPrice}}
+                        document.getElementById('currentCurencyPrice').textContent = {{.GbpRoundPrice}}
+		                break
+	                case 'JPY':
+                        document.getElementById('currentCurrencySymbol').textContent = '¥'
+                        document.getElementById('currentKFormattedPrice').textContent = {{.JpyTruncPrice}}
+                        document.getElementById('currentCurencyPrice').textContent = {{.JpyRoundPrice}}
+		                break
+	                case 'RUB':
+                        document.getElementById('currentCurrencySymbol').textContent = '₽'
+                        document.getElementById('currentKFormattedPrice').textContent = {{.RubTruncPrice}}
+                        document.getElementById('currentCurencyPrice').textContent = {{.RubRoundPrice}}
+		                break
+                    default:
+                        document.getElementById('currentCurrencySymbol').textContent = '$'
+                        document.getElementById('currentKFormattedPrice').textContent = {{.UsdTruncPrice}}
+                        document.getElementById('currentCurencyPrice').textContent = {{.UsdRoundPrice}}
+		                break
+                }
+            })
         </script>
 
 <!-- Global site tag (gtag.js) - Google Analytics -->
@@ -123,9 +190,15 @@
 							<span class="item-icon">
 								<i class="fas fa-cubes"></i>
 							</span>
-                            <span class="item-text">Pr<span class="d-none d-md-inline">ice</span>:</span>
+                            <span class="d-none d-xl-inline item-text">Pr<span class="d-none d-md-inline">ice</span>:</span>
                         </div>
-                        <div class="info-item-body"><a id="banner-eth-price-data">${{.EthPrice}}</a></div>
+                        <div class="info-item-body">
+                            <a id="banner-eth-price-data">
+                                <span id="currentCurrencySymbol" class="currency-symbol"></span>
+                                <span id="currentKFormattedPrice" class="k-formatted-price"></span>
+                                <span id="currentCurencyPrice" class="price"></span>
+                            </a>
+                        </div>
                     </div>
                 </div>
 

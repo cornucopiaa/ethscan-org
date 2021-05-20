@@ -1,7 +1,7 @@
 {{ define "js"}}
 
-    <script type="text/javascript" src="/bundle/js/datatables.min.js"></script>
-    <script type="text/javascript" src="/bundle/js/bootstrap4-toggle.min.js"></script>
+    <script type="text/javascript" src="/js/datatables.min.js"></script>
+    <script type="text/javascript" src="/js/bootstrap4-toggle.min.js"></script>
     {{ .CsrfField }}
     <script>
         var events = {
@@ -9,16 +9,17 @@
             validator_balance_decreased: 'balance decreases',
             validator_attestation_missed: 'attestations missed',
             validator_got_slashed: 'validator slashed',
-            validator_proposal_missed: 'missed proposals',
-            validator_proposal_submitted: 'submitted proposals',
+            validator_proposal_missed: 'proposals missed',
+            validator_proposal_submitted: 'proposals submitted',
+            eth_client_update: 'eth client update',
+            user_tax_report: 'monthly report'
 
         }
         var evetnsArr = [
             ['validator_balance_decreased', 'balance decreases'],
-            // ['validator_proposal_missed', 'proposals missed'],
             ['validator_got_slashed', 'validator slashed'],
-            ['validator_proposal_submitted', 'submitted proposals'],
-            ['validator_proposal_missed', 'missed proposals'],
+            ['validator_proposal_submitted', 'proposals submitted'],
+            ['validator_proposal_missed', 'proposals missed'],
             ['validator_attestation_missed', 'attestations missed'],
         ]
 
@@ -58,7 +59,6 @@
                             if(box.previousSibling) box.previousSibling.classList.add('d-none')
 
                             if (response.status === 200) {
-                                // $('#subscriptions').DataTable().ajax.reload()
                                 $('#subscriptions').DataTable().ajax.reload()
                             } else {
                                 box.checked = false
@@ -136,10 +136,9 @@
                 },
                 columnDefs: [
                     {
-                        targets: 1,
-                        data: '1',
+                        targets: 2,
+                        data: '2',
                         render: function (data, type, row, meta) {
-                            console.log(data)
                             if (data === '0.00 ETH') {
                                 return 'pending'
                             }
@@ -147,15 +146,14 @@
                         }
                     },
                     {
-                        targets: 2,
-                        data: '2',
+                        targets: 3,
+                        data: '3',
                         // width: '70%',
                         render: function (data, type, row, meta) {
                             // var subscriptions = data.split(',')
-                            // console.log(data)
                             var checked = ''
                             if (row.length) {
-                                var address = (/0x[0-9a-fA-F]{96}/).exec(row[0])
+                                var address = (/0x[0-9a-fA-F]{96}/).exec(row[1])
                                 if (address.length) {
                                     data.map(function (event) {
                                         if (event === 'validator_balance_decreased') {
@@ -223,7 +221,6 @@
                     targets: 1,
                     data: '1',
                     render: function (data, type, row, meta) {
-                        console.log(data)
                         return events[data]
                     }
                 }],
@@ -234,15 +231,15 @@
         })
     </script>
 {{end}} {{ define "css"}}
-    <link rel="stylesheet" type="text/css" href="/bundle/css/bootstrap4-toggle.min.css"/>
-    <link rel="stylesheet" type="text/css" href="/bundle/css/datatables.min.css"/>
+    <link rel="stylesheet" type="text/css" href="/css/bootstrap4-toggle.min.css"/>
+    <link rel="stylesheet" type="text/css" href="/css/datatables.min.css"/>
     <style>
         input[type="checkbox"] {
             width: 1rem;
             height: 1rem;
         }
 
-        #notifications > tbody > tr > td:nth-child(3) {
+        #notifications > tbody > tr > td:nth-child(4) {
             display: flex;
             flex-wrap: wrap;
             flex-direction: row;
@@ -250,7 +247,7 @@
             align-items: left;
         }
 
-        #notifications > tbody > tr > td:nth-child(3) > span {
+        #notifications > tbody > tr > td:nth-child(4) > span {
             flex: 1 1 200px;
             max-width: 210px;
         }
@@ -285,7 +282,8 @@
                             <table class="table" id="notifications">
                                 <thead>
                                 <tr>
-                                    <th>Validator</th>
+                                    <th>Index</th>
+                                    <th>Public Key</th>
                                     <th>Balance</th>
                                     <th>Notify me when</th>
                                     <!-- <th>Action</th> -->
@@ -388,7 +386,7 @@
                 </div>
             </div>
 
-            <h2 class="h4 mt-3">Email Subscriptions</h2>
+            <h2 class="h4 mt-3">Subscriptions</h2>
             <div class="card mb-3">
                 <div class="card-body px-0 py-2">
                     <div class="table-responsive pt-2 d-none" id="subscriptions-container">

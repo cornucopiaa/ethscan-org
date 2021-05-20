@@ -1,6 +1,6 @@
 {{ define "js"}}
-    <script type="text/javascript" src="/bundle/js/datatables.min.js"></script>
-    <script type="text/javascript" src="/bundle/js/datatable_input.js"></script>
+    <script type="text/javascript" src="/js/datatables.min.js"></script>
+    <script type="text/javascript" src="/js/datatable_input.js"></script>
     <script>
         var validatorsDataTable;
         var stateFilterDropDownHtml = `<div><label>
@@ -30,28 +30,28 @@
                 validatorsDataTable.column(5).visible(true);
                 validatorsDataTable.column(6).visible(true);
                 validatorsDataTable.column(7).visible(true);
-                validatorsDataTable.column(8).visible(true)
+                validatorsDataTable.column(8).visible(false);
             } else if (state === "pending") {
                 validatorsDataTable.column(3).visible(true);
                 validatorsDataTable.column(4).visible(true);
                 validatorsDataTable.column(5).visible(false);
                 validatorsDataTable.column(6).visible(false);
                 validatorsDataTable.column(7).visible(false);
-                validatorsDataTable.column(8).visible(false)
+                validatorsDataTable.column(8).visible(false);
             } else if (state === "active" || state === "slashing" || state === "exiting") {
                 validatorsDataTable.column(3).visible(true);
                 validatorsDataTable.column(4).visible(true);
                 validatorsDataTable.column(5).visible(false);
                 validatorsDataTable.column(6).visible(false);
                 validatorsDataTable.column(7).visible(true);
-                validatorsDataTable.column(8).visible(true)
+                validatorsDataTable.column(8).visible(false);
             } else if (state === "exited") {
                 validatorsDataTable.column(3).visible(false);
                 validatorsDataTable.column(4).visible(true);
                 validatorsDataTable.column(5).visible(true);
                 validatorsDataTable.column(6).visible(true);
                 validatorsDataTable.column(7).visible(false);
-                validatorsDataTable.column(8).visible(true)
+                validatorsDataTable.column(8).visible(true);
             }
         }
 
@@ -188,16 +188,19 @@
                         targets: 8,
                         data: '8',
                         render: function (data, type, row, meta) {
-                            return `<span data-toggle="tooltip" data-placement="top" title="${data[0]} executed / ${data[1]} missed"><span class="text-success">${data[0]}</span> / <span class="text-danger">${data[1]}</span></span>`
+                            if (data === true) {
+                               return `<span data-toggle="tooltip" data-placement="top" title="slashed" class="text-danger">true</span>`
+                            }
+                            return `<span data-toggle="tooltip" data-placement="top" title="unslashed" class="text-success">false</span>`
                         }
-                    }
+                    },
                 ]
             })
         })
     </script>
 {{end}} {{ define "css"}}
     <link rel="stylesheet" type="text/css"
-          href="/bundle/css//datatables.min.css"/>
+          href="/css//datatables.min.css"/>
     <style>
         .dataTables_wrapper {
             min-height: 400px; /* this is needed to make the bootstrap-dropdown work when the table is empty */
@@ -288,7 +291,7 @@
                                 <th>Exit</th>
                                 <th title="Withdrawable epoch number">W/able</th>
                                 <th>Last Attestation</th>
-                                <th>Proposals</th>
+                                <th>Slashed</th>
                             </tr>
                             </thead>
                             <tbody></tbody>

@@ -15,7 +15,7 @@ import (
 	"strings"
 )
 
-var validatorsTemplate = template.Must(template.New("validators").ParseFiles("templates/layout.html", "templates/validators.html"))
+var validatorsTemplate = template.Must(template.New("validators").Funcs(utils.GetTemplateFuncs()).ParseFiles("templates/layout.html", "templates/validators.html"))
 
 // Validators returns the validators using a go template
 func Validators(w http.ResponseWriter, r *http.Request) {
@@ -118,7 +118,7 @@ func parseValidatorsDataQueryParams(r *http.Request) (*ValidatorsDataQueryParams
 	case "exiting_offline":
 		qryStateFilter = "AND validators.status = 'exiting_offline'"
 	case "exited":
-		qryStateFilter = "AND validators.status = 'exited'"
+		qryStateFilter = "AND (validators.status = 'exited' OR validators.status = 'slashed')"
 	default:
 		qryStateFilter = ""
 	}
@@ -133,7 +133,7 @@ func parseValidatorsDataQueryParams(r *http.Request) (*ValidatorsDataQueryParams
 		"5": "exitepoch",
 		"6": "withdrawableepoch",
 		"7": "lastattestationslot",
-		"8": "executedproposals",
+		"8": "slashed",
 	}
 	orderBy, exists := orderByMap[orderColumn]
 	if !exists {
@@ -194,6 +194,8 @@ func parseValidatorsDataQueryParams(r *http.Request) (*ValidatorsDataQueryParams
 func ValidatorsData(w http.ResponseWriter, r *http.Request) {
 	currency := GetCurrency(r)
 
+	stats := services.GetLatestStats()
+
 	w.Header().Set("Content-Type", "application/json")
 
 	dataQuery, err := parseValidatorsDataQueryParams(r)
@@ -203,47 +205,56 @@ func ValidatorsData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	totalCount, err := db.GetTotalValidatorsCount()
-	if err != nil {
-		logger.Errorf("error retrieving ejected validator count: %v", err)
-		http.Error(w, "Internal server error", 503)
-		return
+	totalCount := stats.TotalValidatorCount
+	if totalCount == nil {
+		totalCount = new(uint64)
 	}
 
-	qry := fmt.Sprintf(`
-		WITH
-			proposals AS (
-				SELECT validatorindex, pa.status, count(*)
-				FROM proposal_assignments pa
-				INNER JOIN blocks b ON pa.proposerslot = b.slot AND b.status <> '3'
-				GROUP BY validatorindex, pa.status
-			)
-		SELECT
-			validators.validatorindex,
-			validators.pubkey,
-			validators.withdrawableepoch,
-			validators.balance,
-			validators.effectivebalance,
-			validators.slashed,
-			validators.activationepoch,
-			validators.exitepoch,
-			validators.lastattestationslot,
-			COALESCE(validator_names.name, '') AS name,
-			validators.status AS state,
-			COALESCE(p1.count,0) AS executedproposals,
-			COALESCE(p2.count,0) AS missedproposals
-		FROM validators
-		LEFT JOIN validator_names ON validators.pubkey = validator_names.publickey
-		LEFT JOIN proposals p1 ON validators.validatorindex = p1.validatorindex AND p1.status = 1
-		LEFT JOIN proposals p2 ON validators.validatorindex = p2.validatorindex AND p2.status = 2
-		WHERE (ENCODE(validators.pubkey::bytea, 'hex') LIKE $1
-			OR CAST(validators.validatorindex AS text) LIKE $1)
-		%s
-		ORDER BY %s %s
-		LIMIT $2 OFFSET $3`, dataQuery.StateFilter, dataQuery.OrderBy, dataQuery.OrderDir)
-
 	var validators []*types.ValidatorsPageDataValidators
-	err = db.DB.Select(&validators, qry, "%"+dataQuery.Search+"%", dataQuery.Length, dataQuery.Start)
+	qry := ""
+	if dataQuery.Search == "" && dataQuery.StateFilter == "" {
+		qry = fmt.Sprintf(`
+			SELECT
+				validators.validatorindex,
+				validators.pubkey,
+				validators.withdrawableepoch,
+				validators.balance,
+				validators.effectivebalance,
+				validators.slashed,
+				validators.activationepoch,
+				validators.exitepoch,
+				validators.lastattestationslot,
+				COALESCE(validator_names.name, '') AS name,
+				validators.status AS state
+			FROM validators
+			LEFT JOIN validator_names ON validators.pubkey = validator_names.publickey
+			ORDER BY %s %s
+			LIMIT $1 OFFSET $2`, dataQuery.OrderBy, dataQuery.OrderDir)
+		err = db.DB.Select(&validators, qry, dataQuery.Length, dataQuery.Start)
+	} else {
+		qry = fmt.Sprintf(`
+			SELECT
+				validators.validatorindex,
+				validators.pubkey,
+				validators.withdrawableepoch,
+				validators.balance,
+				validators.effectivebalance,
+				validators.slashed,
+				validators.activationepoch,
+				validators.exitepoch,
+				validators.lastattestationslot,
+				COALESCE(validator_names.name, '') AS name,
+				validators.status AS state
+			FROM validators
+			LEFT JOIN validator_names ON validators.pubkey = validator_names.publickey
+			WHERE (pubkeyhex LIKE $1
+				OR CAST(validators.validatorindex AS text) LIKE $1
+				OR LOWER(validator_names.name) LIKE LOWER($1))
+			%s
+			ORDER BY %s %s
+			LIMIT $2 OFFSET $3`, dataQuery.StateFilter, dataQuery.OrderBy, dataQuery.OrderDir)
+		err = db.DB.Select(&validators, qry, "%"+dataQuery.Search+"%", dataQuery.Length, dataQuery.Start)
+	}
 	if err != nil {
 		logger.Errorf("error retrieving validators data: %v", err)
 		http.Error(w, "Internal server error", 503)
@@ -293,18 +304,15 @@ func ValidatorsData(w http.ResponseWriter, r *http.Request) {
 			tableData[i] = append(tableData[i], nil)
 		}
 
-		tableData[i] = append(tableData[i], []interface{}{
-			v.ExecutedProposals,
-			v.MissedProposals,
-		})
+		tableData[i] = append(tableData[i], v.Slashed)
 
 		tableData[i] = append(tableData[i], html.EscapeString(v.Name))
 	}
 
 	data := &types.DataTableResponse{
 		Draw:            dataQuery.Draw,
-		RecordsTotal:    totalCount,
-		RecordsFiltered: totalCount,
+		RecordsTotal:    *totalCount,
+		RecordsFiltered: *totalCount,
 		Data:            tableData,
 	}
 

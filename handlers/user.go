@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -52,16 +53,27 @@ func UserSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	subscription, err := db.GetUserSubscription(user.UserID)
-	if err != nil {
-		logger.Errorf("Error retrieving the email for user: %v %v", user.UserID, err)
+	subscription, err := db.StripeGetUserAPISubscription(user.UserID)
+	if err != nil && err != sql.ErrNoRows {
+		logger.Errorf("Error retrieving the subscriptions for user: %v %v", user.UserID, err)
 		session.Flashes("Error: Something went wrong.")
 		session.Save(r, w)
 		http.Redirect(w, r, "/user/settings", http.StatusSeeOther)
 		return
 	}
 
+	var pairedDevices []types.PairedDevice = nil
+	pairedDevices, err = db.GetUserDevicesByUserID(user.UserID)
+	if err != nil && err != sql.ErrNoRows {
+		logger.Errorf("Error retrieving the paired devices for user: %v %v", user.UserID, err)
+		pairedDevices = nil
+	}
+
+	userSettingsData.PairedDevices = pairedDevices
 	userSettingsData.Subscription = subscription
+	userSettingsData.Sapphire = &utils.Config.Frontend.Stripe.Sapphire
+	userSettingsData.Emerald = &utils.Config.Frontend.Stripe.Emerald
+	userSettingsData.Diamond = &utils.Config.Frontend.Stripe.Diamond
 	userSettingsData.Flashes = utils.GetFlashes(w, r, authSessionName)
 	userSettingsData.CsrfField = csrf.TemplateField(r)
 
@@ -255,6 +267,7 @@ func UserNotificationsData(w http.ResponseWriter, r *http.Request) {
 	user := getUser(w, r)
 
 	type watchlistSubscription struct {
+		Index     uint64
 		Publickey []byte
 		Balance   uint64
 		Events    *pq.StringArray
@@ -262,22 +275,20 @@ func UserNotificationsData(w http.ResponseWriter, r *http.Request) {
 
 	wl := []watchlistSubscription{}
 	err = db.DB.Select(&wl, `
-	SELECT 
+		SELECT 
+			validators.validatorindex as index,
 			users_validators_tags.validator_publickey as publickey,
 			COALESCE (MAX(validators.balance), 0) as balance,
 			ARRAY_REMOVE(ARRAY_AGG(users_subscriptions.event_name), NULL) as events
 		FROM users_validators_tags
 		LEFT JOIN users_subscriptions
-		ON 
-			users_validators_tags.user_id = users_subscriptions.user_id
-		AND 
-			ENCODE(users_validators_tags.validator_publickey::bytea, 'hex') = users_subscriptions.event_filter
+			ON users_validators_tags.user_id = users_subscriptions.user_id
+			AND ENCODE(users_validators_tags.validator_publickey::bytea, 'hex') = users_subscriptions.event_filter
 		LEFT JOIN validators
-		ON
-			users_validators_tags.validator_publickey = validators.pubkey
+			ON users_validators_tags.validator_publickey = validators.pubkey
 		WHERE users_validators_tags.user_id = $1
-		GROUP BY users_validators_tags.user_id, users_validators_tags.validator_publickey;
-	`, user.UserID)
+		GROUP BY users_validators_tags.user_id, users_validators_tags.validator_publickey, validators.validatorindex;
+		`, user.UserID)
 	if err != nil {
 		logger.Errorf("error retrieving subscriptions for users: %v validators: %v", user.UserID, err)
 		http.Error(w, "Internal server error", 503)
@@ -287,15 +298,13 @@ func UserNotificationsData(w http.ResponseWriter, r *http.Request) {
 	tableData := make([][]interface{}, 0, len(wl))
 	for _, entry := range wl {
 		tableData = append(tableData, []interface{}{
+			utils.FormatValidator(entry.Index),
 			utils.FormatPublicKey(entry.Publickey),
 			utils.FormatBalance(entry.Balance, currency),
 			entry.Events,
-			// utils.FormatBalance(item.Balance),
-			// item.Events[0],
 		})
 	}
 
-	// log.Println("COUNT", len(watchlist))
 	data := &types.DataTableResponse{
 		Draw:            draw,
 		RecordsTotal:    uint64(len(wl)),
@@ -371,6 +380,8 @@ func UserSubscriptionsData(w http.ResponseWriter, r *http.Request) {
 			} else {
 				pubkey = utils.FormatPublicKey(h)
 			}
+		} else if sub.EventName == types.TaxReportEventName {
+			pubkey = template.HTML(`<a href="/rewards">report</a>`)
 		}
 
 		tableData = append(tableData, []interface{}{
@@ -522,7 +533,7 @@ func UserUpdatePasswordPost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !currentUser.Confirmed {
-		session.AddFlash("Error: Email has not been comfirmed, please click the link in the email we sent you or <a href='/resend'>resend link</a>!")
+		session.AddFlash("Error: Email has not been confirmed, please click the link in the email we sent you or <a href='/resend'>resend link</a>!")
 		session.Save(r, w)
 		http.Redirect(w, r, "/user/settings", http.StatusSeeOther)
 		return
@@ -633,9 +644,11 @@ func UserConfirmUpdateEmail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	q := r.URL.Query()
-	newEmail, err := url.QueryUnescape(q.Get("email"))
-	if err != nil {
-		utils.SetFlash(w, r, authSessionName, "Error: Could not update your email please try again.")
+
+	newEmail := q.Get("email")
+
+	if !utils.IsValidEmail(newEmail) {
+		utils.SetFlash(w, r, authSessionName, "Error: Could not update your email because the new email is invalid, please try again.")
 		http.Redirect(w, r, "/confirmation", http.StatusSeeOther)
 		return
 	}
@@ -888,7 +901,7 @@ func UserDashboardWatchlistAdd(w http.ResponseWriter, r *http.Request) {
 
 	publicKeys := make([]string, 0)
 	db.DB.Select(&publicKeys, `
-	SELECT Encode(pubkey::bytea, 'hex') as pubkey
+	SELECT pubkeyhex as pubkey
 	FROM validators
 	WHERE validatorindex = ANY($1)
 	`, pq.Int64Array(indicesParsed))

@@ -28,9 +28,31 @@ type PageData struct {
 	Mainnet               bool
 	DepositContract       string
 	EthPrice              float64
+	EthRoundPrice         int
+	EthTruncPrice         string
+	UsdRoundPrice         int
+	UsdTruncPrice         string
+	EurRoundPrice         int
+	EurTruncPrice         string
+	GbpRoundPrice         int
+	GbpTruncPrice         string
+	CnyRoundPrice         int
+	CnyTruncPrice         string
+	RubRoundPrice         int
+	RubTruncPrice         string
+	CadRoundPrice         int
+	CadTruncPrice         string
+	AudRoundPrice         int
+	AudTruncPrice         string
+	JpyRoundPrice         int
+	JpyTruncPrice         string
 	Currency              string
 	ExchangeRate          float64
 	InfoBanner            *template.HTML
+	ClientsUpdated        bool
+	IsUserClientUpdated   func(uint64) bool
+	Phase0                Phase0
+	Lang                  string
 }
 
 // Meta is a struct to hold metadata about the page
@@ -45,7 +67,7 @@ type Meta struct {
 	GATag       string
 }
 
-//LatestState is a struct to hold data for the banner
+// LatestState is a struct to hold data for the banner
 type LatestState struct {
 	LastProposedSlot      uint64  `json:"lastProposedSlot"`
 	CurrentSlot           uint64  `json:"currentSlot"`
@@ -54,12 +76,35 @@ type LatestState struct {
 	FinalityDelay         uint64  `json:"finalityDelay"`
 	IsSyncing             bool    `json:"syncing"`
 	EthPrice              float64 `json:"ethPrice"`
+	EthRoundPrice         int     `json:"ethRoundPrice"`
+	EthTruncPrice         string  `json:"ethTruncPrice"`
+	UsdRoundPrice         int     `json:"usdRoundPrice"`
+	UsdTruncPrice         string  `json:"usdTruncPrice"`
+	EurRoundPrice         int     `json:"eurRoundPrice"`
+	EurTruncPrice         string  `json:"eurTruncPrice"`
+	GbpRoundPrice         int     `json:"gbpRoundPrice"`
+	GbpTruncPrice         string  `json:"gbpTruncPrice"`
+	CnyRoundPrice         int     `json:"cnyRoundPrice"`
+	CnyTruncPrice         string  `json:"cnyTruncPrice"`
+	RubRoundPrice         int     `json:"rubRoundPrice"`
+	RubTruncPrice         string  `json:"rubTruncPrice"`
+	CadRoundPrice         int     `json:"cadRoundPrice"`
+	CadTruncPrice         string  `json:"cadTruncPrice"`
+	AudRoundPrice         int     `json:"audRoundPrice"`
+	AudTruncPrice         string  `json:"audTruncPrice"`
+	JpyRoundPrice         int     `json:"jpyRoundPrice"`
+	JpyTruncPrice         string  `json:"jpyTruncPrice"`
+	Currency              string  `json:"currency"`
 }
 
 type Stats struct {
-	TopDepositors        *[]StatsTopDepositors
-	InvalidDepositCount  *uint64 `db:"count"`
-	UniqueValidatorCount *uint64 `db:"count"`
+	TopDepositors         *[]StatsTopDepositors
+	InvalidDepositCount   *uint64 `db:"count"`
+	UniqueValidatorCount  *uint64 `db:"count"`
+	TotalValidatorCount   *uint64 `db:"count"`
+	ActiveValidatorCount  *uint64 `db:"count"`
+	PendingValidatorCount *uint64 `db:"count"`
+	ValidatorChurnLimit   *uint64
 }
 
 type StatsTopDepositors struct {
@@ -97,7 +142,6 @@ type IndexPageData struct {
 	Mainnet                   bool                   `json:"-"`
 	DepositChart              *ChartsPageDataChart
 	DepositDistribution       *ChartsPageDataChart
-	Lang                      string
 }
 
 type IndexPageDataEpochs struct {
@@ -210,8 +254,17 @@ type ValidatorPageData struct {
 	ActivationTs                        time.Time
 	ExitTs                              time.Time
 	Status                              string `db:"status"`
+	BlocksCount                         uint64
+	ScheduledBlocksCount                uint64
+	MissedBlocksCount                   uint64
+	OrphanedBlocksCount                 uint64
 	ProposedBlocksCount                 uint64
+	UnmissedBlocksPercentage            float64 // missed/(executed+orphaned+scheduled)
 	AttestationsCount                   uint64
+	ExecutedAttestationsCount           uint64
+	MissedAttestationsCount             uint64
+	OrphanedAttestationsCount           uint64
+	UnmissedAttestationsPercentage      float64 // missed/(executed+orphaned)
 	StatusProposedCount                 uint64
 	StatusMissedCount                   uint64
 	DepositsCount                       uint64
@@ -224,8 +277,7 @@ type ValidatorPageData struct {
 	RankPercentage                      float64
 	Apr                                 float64
 	Proposals                           [][]uint64
-	BalanceHistoryChartData             [][]float64
-	EffectiveBalanceHistoryChartData    [][]float64
+	IncomeHistoryChartData              []*ChartDataPoint
 	Deposits                            *ValidatorDeposits
 	Eth1DepositAddress                  []byte
 	FlashMessage                        string
@@ -238,6 +290,46 @@ type ValidatorPageData struct {
 	NetworkStats                        *IndexPageData
 	EstimatedActivationTs               int64
 	InclusionDelay                      int64
+	CurrentAttestationStreak            uint64
+	LongestAttestationStreak            uint64
+}
+
+type ValidatorStatsTablePageData struct {
+	ValidatorIndex uint64
+	Rows           []*ValidatorStatsTableRow
+	Currency       string
+}
+
+type ValidatorStatsTableRow struct {
+	ValidatorIndex         uint64
+	Day                    int64         `db:"day"`
+	StartBalance           sql.NullInt64 `db:"start_balance"`
+	EndBalance             sql.NullInt64 `db:"end_balance"`
+	Income                 int64         `db:"-"`
+	IncomeExchangeRate     float64       `db:"-"`
+	IncomeExchangeCurrency string        `db:"-"`
+	IncomeExchanged        float64       `db:"-"`
+	MinBalance             sql.NullInt64 `db:"min_balance"`
+	MaxBalance             sql.NullInt64 `db:"max_balance"`
+	StartEffectiveBalance  sql.NullInt64 `db:"start_effective_balance"`
+	EndEffectiveBalance    sql.NullInt64 `db:"end_effective_balance"`
+	MinEffectiveBalance    sql.NullInt64 `db:"min_effective_balance"`
+	MaxEffectiveBalance    sql.NullInt64 `db:"max_effective_balance"`
+	MissedAttestations     sql.NullInt64 `db:"missed_attestations"`
+	OrphanedAttestations   sql.NullInt64 `db:"orphaned_attestations"`
+	ProposedBlocks         sql.NullInt64 `db:"proposed_blocks"`
+	MissedBlocks           sql.NullInt64 `db:"missed_blocks"`
+	OrphanedBlocks         sql.NullInt64 `db:"orphaned_blocks"`
+	AttesterSlashings      sql.NullInt64 `db:"attester_slashings"`
+	ProposerSlashings      sql.NullInt64 `db:"proposer_slashings"`
+	Deposits               sql.NullInt64 `db:"deposits"`
+	DepositsAmount         sql.NullInt64 `db:"deposits_amount"`
+}
+
+type ChartDataPoint struct {
+	X     float64 `json:"x"`
+	Y     float64 `json:"y"`
+	Color string  `json:"color"`
 }
 
 //ValidatorRank is a struct for validator rank data
@@ -255,9 +347,18 @@ type DailyProposalCount struct {
 
 // ValidatorBalanceHistory is a struct for the validator balance history data
 type ValidatorBalanceHistory struct {
-	Epoch            uint64 `db:"epoch"`
+	Day              uint64 `db:"day"`
 	Balance          uint64 `db:"balance"`
 	EffectiveBalance uint64 `db:"effectivebalance"`
+}
+
+// ValidatorBalanceHistory is a struct for the validator income history data
+type ValidatorIncomeHistory struct {
+	Day          int64 `db:"day"` // day can be -1 which is pre-genesis
+	Income       int64
+	StartBalance int64 `db:"start_balance" json:"-"`
+	EndBalance   int64 `db:"end_balance" json:"-"`
+	Deposits     int64 `db:"deposits_amount" json:"-"`
 }
 
 type ValidatorBalanceHistoryChartData struct {
@@ -286,6 +387,7 @@ type ValidatorPerformance struct {
 	Performance31d  int64  `db:"performance31d"`
 	Performance365d int64  `db:"performance365d"`
 	Rank7d          int64  `db:"rank7d"`
+	TotalCount      uint64 `db:"total_count"`
 }
 
 // ValidatorAttestation is a struct for the validators attestations data
@@ -373,6 +475,7 @@ type BlockPageData struct {
 	VoluntaryExitscount    uint64 `db:"voluntaryexitscount"`
 	SlashingsCount         uint64
 	VotesCount             uint64
+	VotingValidatorsCount  uint64
 	Mainnet                bool
 
 	Attestations      []*BlockPageAttestation // Attestations included in this block
@@ -467,6 +570,7 @@ type BlockPageAttesterSlashing struct {
 type BlockPageProposerSlashing struct {
 	BlockSlot         uint64 `db:"block_slot"`
 	BlockIndex        uint64 `db:"block_index"`
+	BlockRoot         []byte `db:"block_root" json:"block_root"`
 	ProposerIndex     uint64 `db:"proposerindex"`
 	Header1Slot       uint64 `db:"header1_slot"`
 	Header1ParentRoot []byte `db:"header1_parentroot"`
@@ -590,6 +694,12 @@ type GenericChartData struct {
 	StackingMode                    string                    `json:"stacking_mode"`
 	ColumnDataGroupingApproximation string                    // "average", "averages", "open", "high", "low", "close" and "sum"
 	Series                          []*GenericChartDataSeries `json:"series"`
+	Drilldown                       interface{}               `json:"drilldown"`
+}
+
+type SeriesDataItem struct {
+	Name string `json:"name"`
+	Y    uint64 `json:"y"`
 }
 
 // GenericChartDataSeries is a struct to hold chart series data
@@ -606,9 +716,10 @@ type ChartsPageData []*ChartsPageDataChart
 
 // ChartsPageDataChart is a struct to hold a chart for the charts-page
 type ChartsPageDataChart struct {
-	Order int
-	Path  string
-	Data  *GenericChartData
+	Order  int
+	Path   string
+	Data   *GenericChartData
+	Height int
 }
 
 // DashboardData is a struct to hold data for the dashboard-page
@@ -629,11 +740,21 @@ type DashboardValidatorBalanceHistory struct {
 
 // ValidatorEarnings is a struct to hold the earnings of one or multiple validators
 type ValidatorEarnings struct {
-	Total     int64   `json:"total"`
-	LastDay   int64   `json:"lastDay"`
-	LastWeek  int64   `json:"lastWeek"`
-	LastMonth int64   `json:"lastMonth"`
-	APR       float64 `json:"apr"`
+	Total                   int64         `json:"total"`
+	LastDay                 int64         `json:"lastDay"`
+	LastWeek                int64         `json:"lastWeek"`
+	LastMonth               int64         `json:"lastMonth"`
+	APR                     float64       `json:"apr"`
+	TotalDeposits           int64         `json:"totalDeposits"`
+	EarningsInPeriodBalance int64         `json:"earningsInPeriodBalance"`
+	EarningsInPeriod        int64         `json:"earningsInPeriod"`
+	EpochStart              int64         `json:"epochStart"`
+	EpochEnd                int64         `json:"epochEnd"`
+	LastDayFormatted        template.HTML `json:"lastDayFormatted"`
+	LastWeekFormatted       template.HTML `json:"lastWeekFormatted"`
+	LastMonthFormatted      template.HTML `json:"lastMonthFormatted"`
+	TotalFormatted          template.HTML `json:"totalFormatted"`
+	TotalChangeFormatted    template.HTML `json:"totalChangeFormatted"`
 }
 
 // ValidatorAttestationSlashing is a struct to hold data of an attestation-slashing
@@ -749,11 +870,23 @@ type User struct {
 type UserSubscription struct {
 	UserID         uint64  `db:"id"`
 	Email          string  `db:"email"`
-	Active         bool    `db:"stripe_active"`
-	CustomerID     *string `db:"stripe_customerid"`
-	SubscriptionID *string `db:"stripe_subscriptionid"`
-	PriceID        *string `db:"stripe_priceid"`
+	Active         *bool   `db:"active"`
+	CustomerID     *string `db:"stripe_customer_id"`
+	SubscriptionID *string `db:"subscription_id"`
+	PriceID        *string `db:"price_id"`
 	ApiKey         *string `db:"api_key"`
+}
+
+type StripeSubscription struct {
+	CustomerID     *string `db:"customer_id"`
+	SubscriptionID *string `db:"subscription_id"`
+	PriceID        *string `db:"price_id"`
+	Active         bool    `db:"active"`
+}
+
+type FilterSubscription struct {
+	User     uint64
+	PriceIds []string
 }
 
 type AuthData struct {
@@ -770,7 +903,20 @@ type CsrfData struct {
 type UserSettingsPageData struct {
 	CsrfField template.HTML
 	AuthData
-	Subscription UserSubscription
+	Subscription  UserSubscription
+	PairedDevices []PairedDevice
+	Sapphire      *string
+	Emerald       *string
+	Diamond       *string
+}
+
+type PairedDevice struct {
+	ID            uint      `json:"id"`
+	DeviceName    string    `json:"device_name"`
+	NotifyEnabled bool      `json:"notify_enabled"`
+	Active        bool      `json:"active"`
+	AppName       string    `json:"app_name"`
+	CreatedAt     time.Time `json:"created_ts"`
 }
 
 type UserAuthorizeConfirmPageData struct {
@@ -791,12 +937,14 @@ type UserNotificationsPageData struct {
 type AdvertiseWithUsPageData struct {
 	FlashMessage string
 	CsrfField    template.HTML
+	RecaptchaKey string
 }
 
 type ApiPricing struct {
 	FlashMessage string
 	User         *User
 	CsrfField    template.HTML
+	RecaptchaKey string
 	Subscription UserSubscription
 	StripePK     string
 	Sapphire     string
@@ -806,6 +954,7 @@ type ApiPricing struct {
 
 type StakeWithUsPageData struct {
 	FlashMessage string
+	RecaptchaKey string
 }
 
 type EthClients struct {
@@ -825,6 +974,7 @@ type EthClientServicesPageData struct {
 	Nimbus       EthClients
 	Lighthouse   EthClients
 	Banner       string
+	CsrfField    template.HTML
 }
 
 type RateLimitError struct {
@@ -836,4 +986,25 @@ func (e *RateLimitError) Error() string {
 }
 
 type Empty struct {
+}
+
+// GoogleRecaptchaResponse ...
+type GoogleRecaptchaResponse struct {
+	Success            bool     `json:"success"`
+	ChallengeTimestamp string   `json:"challenge_ts"`
+	Hostname           string   `json:"hostname"`
+	ErrorCodes         []string `json:"error-codes"`
+	Score              float32  `json:"score,omitempty"`
+	Action             string   `json:"action,omitempty"`
+}
+
+type Price struct {
+	TS  time.Time `db:"ts"`
+	EUR float64   `db:"eur"`
+	USD float64   `db:"usd"`
+	GBP float64   `db:"gbp"`
+	CAD float64   `db:"cad"`
+	JPY float64   `db:"jpy"`
+	CNY float64   `db:"cny"`
+	RUB float64   `db:"rub"`
 }

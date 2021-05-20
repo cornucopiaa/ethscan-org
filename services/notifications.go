@@ -2,12 +2,16 @@ package services
 
 import (
 	"eth2-exporter/db"
+	ethclients "eth2-exporter/ethClients"
 	"eth2-exporter/mail"
+	"eth2-exporter/metrics"
 	"eth2-exporter/notify"
 	"eth2-exporter/types"
 	"eth2-exporter/utils"
 	"fmt"
+	"strings"
 	"time"
+	"unicode/utf8"
 
 	"firebase.google.com/go/messaging"
 )
@@ -25,7 +29,8 @@ func notificationsSender() {
 		notifications := collectNotifications()
 		sendNotifications(notifications)
 		logger.WithField("notifications", len(notifications)).WithField("duration", time.Since(start)).Info("notifications completed")
-		time.Sleep(time.Second * 60)
+		metrics.TaskDuration.WithLabelValues("service_notifications").Observe(time.Since(start).Seconds())
+		time.Sleep(time.Second * 120)
 	}
 }
 
@@ -59,13 +64,80 @@ func collectNotifications() map[uint64]map[types.EventName][]types.Notification 
 		logger.Errorf("error collecting validator_attestation_missed notifications: %v", err)
 	}
 
+	// New ETH clients
+	err = collectEthClientNotifications(notificationsByUserID, types.EthClientUpdateEventName)
+	if err != nil {
+		logger.Errorf("error collecting Eth client notifications: %v", err)
+	}
+
+	//Tax Report
+	err = collectTaxReportNotificationNotifications(notificationsByUserID, types.TaxReportEventName)
+	if err != nil {
+		logger.Errorf("error collecting tax report notifications: %v", err)
+	}
+
 	return notificationsByUserID
 }
 
 func sendNotifications(notificationsByUserID map[uint64]map[types.EventName][]types.Notification) {
 	sendEmailNotifications(notificationsByUserID)
 	sendPushNotifications(notificationsByUserID)
+	sendFrontEndEthClientNotifications(notificationsByUserID)
+	saveNotifications(notificationsByUserID)
 	// sendWebhookNotifications(notificationsByUserID)
+}
+
+func saveNotifications(notificationsByUserID map[uint64]map[types.EventName][]types.Notification) {
+	for userID, userNotifications := range notificationsByUserID {
+		for _, ns := range userNotifications {
+			for _, n := range ns {
+				if n.GetEventName() != types.EthClientUpdateEventName {
+					continue // only store eth client notifications
+				}
+
+				event := fmt.Sprintf("%s", n.GetEventName())
+				filter := n.GetEventFilter()
+
+				if !utf8.ValidString(event) {
+					logger.Errorf("skipping ... received string with invalid encoding %s", event)
+					continue // if one piece of data fails, continue for other data types that may not fail
+				}
+
+				if !utf8.ValidString(filter) {
+					logger.Errorf("skipping ... received string with invalid encoding %s", filter)
+					continue
+				}
+				_, err := db.DB.Exec(`
+					INSERT INTO users_notifications (user_id, event_name, event_filter, sent_ts, epoch)
+					VALUES ($1, $2, $3, TO_TIMESTAMP($4), $5)`,
+					userID, event, filter, time.Now().Unix(), n.GetEpoch())
+
+				if err != nil {
+					logger.Errorf("error when Inserting data to 'users_notifications' table: %v", err)
+				}
+			}
+		}
+	}
+}
+
+func sendFrontEndEthClientNotifications(notificationsByUserID map[uint64]map[types.EventName][]types.Notification) {
+	uids := map[uint64][]types.Notification{}
+	for userID, userNotifications := range notificationsByUserID {
+		for eventName, ns := range userNotifications {
+			if eventName == types.EthClientUpdateEventName {
+				uids[userID] = ns
+			}
+		}
+	}
+	ethclients.SetUsersToNotify(uids)
+}
+
+func getNetwork() string {
+	domainParts := strings.Split(utils.Config.Frontend.SiteDomain, ".")
+	if len(domainParts) >= 3 {
+		return fmt.Sprintf("%s: ", strings.Title(domainParts[0]))
+	}
+	return ""
 }
 
 func sendPushNotifications(notificationsByUserID map[uint64]map[types.EventName][]types.Notification) {
@@ -95,7 +167,7 @@ func sendPushNotifications(notificationsByUserID map[uint64]map[types.EventName]
 					for _, userToken := range userTokens {
 
 						notification := new(messaging.Notification)
-						notification.Title = n.GetTitle()
+						notification.Title = fmt.Sprintf("%s%s", getNetwork(), n.GetTitle())
 						notification.Body = n.GetInfo(false)
 
 						message := new(messaging.Message)
@@ -196,6 +268,7 @@ type validatorBalanceDecreasedNotification struct {
 	StartBalance       uint64
 	EndBalance         uint64
 	SubscriptionID     uint64
+	EventFilter        string
 }
 
 func (n *validatorBalanceDecreasedNotification) GetSubscriptionID() uint64 {
@@ -225,6 +298,10 @@ func (n *validatorBalanceDecreasedNotification) GetTitle() string {
 	return "Validator Balance Decreased"
 }
 
+func (n *validatorBalanceDecreasedNotification) GetEventFilter() string {
+	return n.EventFilter
+}
+
 func getUrlPart(validatorIndex uint64) string {
 	return fmt.Sprintf(` For more information visit: https://%[2]s/validator/%[1]v.`, validatorIndex, utils.Config.Frontend.SiteDomain)
 }
@@ -245,28 +322,30 @@ func collectValidatorBalanceDecreasedNotifications(notificationsByUserID map[uin
 		ValidatorIndex uint64 `db:"validatorindex"`
 		StartBalance   uint64 `db:"startbalance"`
 		EndBalance     uint64 `db:"endbalance"`
+		EventFilter    string `db:"pubkey"`
 	}
 
 	err := db.DB.Select(&dbResult, `
-		SELECT id, user_id, validatorindex, startbalance, endbalance FROM (
+		SELECT id, user_id, validatorindex, startbalance, endbalance, a.pubkey AS pubkey FROM (
 			SELECT 
 				us.id, 
 				us.user_id, 
-				v.validatorindex, 
+				v.validatorindex,
+				v.pubkeyhex AS pubkey, 
 				vb0.balance AS endbalance, 
 				vb3.balance AS startbalance, 
 				us.last_sent_epoch,
 				(SELECT MAX(epoch) FROM (
 					SELECT epoch, balance-LAG(balance) OVER (ORDER BY epoch) AS diff
-					FROM validator_balances 
+					FROM validator_balances_recent 
 					WHERE validatorindex = v.validatorindex AND epoch > us.last_sent_epoch AND epoch > $2 - 10
 				) b WHERE diff > 0) AS lastbalanceincreaseepoch
 			FROM users_subscriptions us
-			INNER JOIN validators v ON ENCODE(v.pubkey, 'hex') = us.event_filter
-			INNER JOIN validator_balances vb0 ON v.validatorindex = vb0.validatorindex AND vb0.epoch = $2
-			INNER JOIN validator_balances vb1 ON v.validatorindex = vb1.validatorindex AND vb1.epoch = $2 - 1 AND vb1.balance > vb0.balance
-			INNER JOIN validator_balances vb2 ON v.validatorindex = vb2.validatorindex AND vb2.epoch = $2 - 2 AND vb2.balance > vb1.balance
-			INNER JOIN validator_balances vb3 ON v.validatorindex = vb3.validatorindex AND vb3.epoch = $2 - 3 AND vb3.balance > vb2.balance
+			INNER JOIN validators v ON v.pubkeyhex = us.event_filter
+			INNER JOIN validator_balances_recent vb0 ON v.validatorindex = vb0.validatorindex AND vb0.epoch = $2
+			INNER JOIN validator_balances_recent vb1 ON v.validatorindex = vb1.validatorindex AND vb1.epoch = $2 - 1 AND vb1.balance > vb0.balance
+			INNER JOIN validator_balances_recent vb2 ON v.validatorindex = vb2.validatorindex AND vb2.epoch = $2 - 2 AND vb2.balance > vb1.balance
+			INNER JOIN validator_balances_recent vb3 ON v.validatorindex = vb3.validatorindex AND vb3.epoch = $2 - 3 AND vb3.balance > vb2.balance
 			WHERE us.event_name = $1 AND us.created_epoch <= $2
 		) a WHERE lastbalanceincreaseepoch IS NOT NULL OR last_sent_epoch IS NULL`,
 		types.ValidatorBalanceDecreasedEventName, latestEpoch)
@@ -282,6 +361,7 @@ func collectValidatorBalanceDecreasedNotifications(notificationsByUserID map[uin
 			EndEpoch:       latestEpoch,
 			StartBalance:   r.StartBalance,
 			EndBalance:     r.EndBalance,
+			EventFilter:    r.EventFilter,
 		}
 
 		if _, exists := notificationsByUserID[r.UserID]; !exists {
@@ -305,6 +385,7 @@ func collectBlockProposalNotifications(notificationsByUserID map[uint64]map[type
 		ValidatorIndex uint64 `db:"validatorindex"`
 		Epoch          uint64 `db:"epoch"`
 		Status         uint64 `db:"status"`
+		EventFilter    string `db:"pubkey"`
 	}
 
 	err := db.DB.Select(&dbResult, `
@@ -313,7 +394,8 @@ func collectBlockProposalNotifications(notificationsByUserID map[uint64]map[type
 				us.user_id, 
 				v.validatorindex, 
 				pa.epoch,
-				pa.status
+				pa.status,
+				ENCODE(v.pubkey::bytea, 'hex') AS pubkey
 			FROM users_subscriptions us
 			INNER JOIN validators v ON ENCODE(v.pubkey, 'hex') = us.event_filter
 			INNER JOIN proposal_assignments pa ON v.validatorindex = pa.validatorindex AND pa.epoch >= ($2 - 5) 
@@ -331,6 +413,7 @@ func collectBlockProposalNotifications(notificationsByUserID map[uint64]map[type
 			Epoch:          r.Epoch,
 			Status:         r.Status,
 			EventName:      eventName,
+			EventFilter:    r.EventFilter,
 		}
 
 		if _, exists := notificationsByUserID[r.UserID]; !exists {
@@ -352,6 +435,7 @@ type validatorProposalNotification struct {
 	Epoch              uint64
 	Status             uint64 // * Can be 0 = scheduled, 1 executed, 2 missed */
 	EventName          types.EventName
+	EventFilter        string
 }
 
 func (n *validatorProposalNotification) GetSubscriptionID() uint64 {
@@ -395,6 +479,10 @@ func (n *validatorProposalNotification) GetTitle() string {
 	return "-"
 }
 
+func (n *validatorProposalNotification) GetEventFilter() string {
+	return n.EventFilter
+}
+
 func collectAttestationNotifications(notificationsByUserID map[uint64]map[types.EventName][]types.Notification, status uint64, eventName types.EventName) error {
 	latestEpoch := LatestEpoch()
 	latestSlot := LatestSlot()
@@ -407,6 +495,7 @@ func collectAttestationNotifications(notificationsByUserID map[uint64]map[types.
 		Status         uint64 `db:"status"`
 		Slot           uint64 `db:"attesterslot"`
 		InclusionSlot  uint64 `db:"inclusionslot"`
+		EventFilter    string `db:"pubkey"`
 	}
 
 	err := db.DB.Select(&dbResult, `
@@ -417,10 +506,11 @@ func collectAttestationNotifications(notificationsByUserID map[uint64]map[types.
 				aa.epoch,
 				aa.status,
 				aa.attesterslot,
-				aa.inclusionslot
+				aa.inclusionslot,
+				ENCODE(v.pubkey::bytea, 'hex') AS pubkey
 			FROM users_subscriptions us
 			INNER JOIN validators v ON ENCODE(v.pubkey, 'hex') = us.event_filter
-			INNER JOIN attestation_assignments aa ON v.validatorindex = aa.validatorindex AND aa.epoch >= ($2 - 3) 
+			INNER JOIN attestation_assignments_p aa ON v.validatorindex = aa.validatorindex AND aa.epoch >= ($2 - 3)  AND aa.week >= ($2 - 3) / 1575
 			WHERE us.event_name = $1 AND aa.status = $3 AND us.created_epoch <= $2 AND aa.epoch >= ($2 - 3)
 			AND (us.last_sent_epoch < ($2 - 6) OR us.last_sent_epoch IS NULL)
 			AND aa.inclusionslot = 0 AND aa.attesterslot < ($4 - 32)
@@ -440,6 +530,7 @@ func collectAttestationNotifications(notificationsByUserID map[uint64]map[types.
 			EventName:      eventName,
 			Slot:           r.Slot,
 			InclusionSlot:  r.InclusionSlot,
+			EventFilter:    r.EventFilter,
 		}
 
 		if _, exists := notificationsByUserID[r.UserID]; !exists {
@@ -463,6 +554,7 @@ type validatorAttestationNotification struct {
 	EventName          types.EventName
 	Slot               uint64
 	InclusionSlot      uint64
+	EventFilter        string
 }
 
 func (n *validatorAttestationNotification) GetSubscriptionID() uint64 {
@@ -496,13 +588,15 @@ func (n *validatorAttestationNotification) GetInfo(includeUrl bool) string {
 func (n *validatorAttestationNotification) GetTitle() string {
 	switch n.Status {
 	case 0:
-		return "Attestation Scheduled"
+		return "Attestation Missed"
 	case 1:
 		return "Attestation Submitted"
-	case 2:
-		return "Attestation Missed"
 	}
 	return "-"
+}
+
+func (n *validatorAttestationNotification) GetEventFilter() string {
+	return n.EventFilter
 }
 
 type validatorGotSlashedNotification struct {
@@ -511,6 +605,7 @@ type validatorGotSlashedNotification struct {
 	Epoch          uint64
 	Slasher        uint64
 	Reason         string
+	EventFilter    string
 }
 
 func (n *validatorGotSlashedNotification) GetSubscriptionID() uint64 {
@@ -537,6 +632,10 @@ func (n *validatorGotSlashedNotification) GetTitle() string {
 	return "Validator got Slashed"
 }
 
+func (n *validatorGotSlashedNotification) GetEventFilter() string {
+	return n.EventFilter
+}
+
 func collectValidatorGotSlashedNotifications(notificationsByUserID map[uint64]map[types.EventName][]types.Notification) error {
 	latestEpoch := LatestEpoch()
 	if latestEpoch == 0 {
@@ -550,6 +649,7 @@ func collectValidatorGotSlashedNotifications(notificationsByUserID map[uint64]ma
 		Slasher        uint64 `db:"slasher"`
 		Epoch          uint64 `db:"epoch"`
 		Reason         string `db:"reason"`
+		EventFilter    string `db:"pubkey"`
 	}
 
 	err := db.DB.Select(&dbResult, `
@@ -582,7 +682,7 @@ func collectValidatorGotSlashedNotifications(notificationsByUserID map[uint64]ma
 				) a
 				ORDER BY slashedvalidator, slot
 			)
-		SELECT us.id, us.user_id, v.validatorindex, s.slasher, s.epoch, s.reason
+		SELECT us.id, us.user_id, v.validatorindex, s.slasher, s.epoch, s.reason, ENCODE(v.pubkey::bytea, 'hex') AS pubkey
 		FROM users_subscriptions us
 		INNER JOIN validators v ON ENCODE(v.pubkey, 'hex') = us.event_filter
 		INNER JOIN slashings s ON s.slashedvalidator = v.validatorindex
@@ -599,6 +699,7 @@ func collectValidatorGotSlashedNotifications(notificationsByUserID map[uint64]ma
 			Slasher:        r.Slasher,
 			Epoch:          r.Epoch,
 			Reason:         r.Reason,
+			EventFilter:    r.EventFilter,
 		}
 		if _, exists := notificationsByUserID[r.UserID]; !exists {
 			notificationsByUserID[r.UserID] = map[types.EventName][]types.Notification{}
@@ -607,6 +708,190 @@ func collectValidatorGotSlashedNotifications(notificationsByUserID map[uint64]ma
 			notificationsByUserID[r.UserID][n.GetEventName()] = []types.Notification{}
 		}
 		notificationsByUserID[r.UserID][n.GetEventName()] = append(notificationsByUserID[r.UserID][n.GetEventName()], n)
+	}
+
+	return nil
+}
+
+type ethClientNotification struct {
+	SubscriptionID uint64
+	UserID         uint64
+	Epoch          uint64
+	EthClient      string
+	EventFilter    string
+}
+
+func (n *ethClientNotification) GetSubscriptionID() uint64 {
+	return n.SubscriptionID
+}
+
+func (n *ethClientNotification) GetEpoch() uint64 {
+	return n.Epoch
+}
+
+func (n *ethClientNotification) GetEventName() types.EventName {
+	return types.EthClientUpdateEventName
+}
+
+func (n *ethClientNotification) GetInfo(includeUrl bool) string {
+	generalPart := fmt.Sprintf(`A new version for %s is available.`, n.EthClient)
+	if includeUrl {
+		url := ""
+		switch n.EthClient {
+		case "Geth":
+			url = "https://github.com/ethereum/go-ethereum/releases"
+		case "Nethermind":
+			url = "https://github.com/NethermindEth/nethermind/releases"
+		case "OpenEthereum":
+			url = "https://github.com/openethereum/openethereum/releases"
+		case "Teku":
+			url = "https://github.com/ConsenSys/teku/releases"
+		case "Prysm":
+			url = "https://github.com/prysmaticlabs/prysm/releases"
+		case "Nimbus":
+			url = "https://github.com/status-im/nimbus-eth2/releases"
+		case "Lighthouse":
+			url = "https://github.com/sigp/lighthouse/releases"
+		default:
+			url = "https://ethscan.org/ethClients"
+		}
+
+		return generalPart + " " + url
+	}
+	return generalPart
+}
+
+func (n *ethClientNotification) GetTitle() string {
+	return fmt.Sprintf("New %s update", n.EthClient)
+}
+
+func (n *ethClientNotification) GetEventFilter() string {
+	return n.EventFilter
+}
+
+func collectEthClientNotifications(notificationsByUserID map[uint64]map[types.EventName][]types.Notification, eventName types.EventName) error {
+	updatedClients := ethclients.GetUpdatedClients() //only check if there are new updates
+	for _, client := range updatedClients {
+		var dbResult []struct {
+			SubscriptionID uint64 `db:"id"`
+			UserID         uint64 `db:"user_id"`
+			Epoch          uint64 `db:"created_epoch"`
+			EventFilter    string `db:"event_filter"`
+		}
+
+		err := db.DB.Select(&dbResult, `
+			SELECT us.id, us.user_id, us.created_epoch, us.event_filter
+			FROM users_subscriptions AS us
+			WHERE 
+				us.event_name=$1 
+			AND 
+				us.event_filter=$2 
+			AND 
+				us.user_id 
+			NOT IN 
+				(SELECT user_id FROM users_notifications as un WHERE un.event_name=$1 AND un.event_filter=$2 AND TO_TIMESTAMP($3) <= un.sent_ts AND un.sent_ts <= NOW() + INTERVAL '2 DAYS')
+			`,
+			eventName, strings.ToLower(client.Name), client.Date.Unix()) // was last notification sent 2 days ago for this client
+
+		if err != nil {
+			return err
+		}
+
+		for _, r := range dbResult {
+			n := &ethClientNotification{
+				SubscriptionID: r.SubscriptionID,
+				UserID:         r.UserID,
+				Epoch:          r.Epoch,
+				EventFilter:    r.EventFilter,
+				EthClient:      client.Name,
+			}
+			if _, exists := notificationsByUserID[r.UserID]; !exists {
+				notificationsByUserID[r.UserID] = map[types.EventName][]types.Notification{}
+			}
+			if _, exists := notificationsByUserID[r.UserID][n.GetEventName()]; !exists {
+				notificationsByUserID[r.UserID][n.GetEventName()] = []types.Notification{}
+			}
+			notificationsByUserID[r.UserID][n.GetEventName()] = append(notificationsByUserID[r.UserID][n.GetEventName()], n)
+		}
+	}
+	return nil
+}
+
+type taxReportNotification struct {
+	SubscriptionID uint64
+	UserID         uint64
+	Epoch          uint64
+	EventFilter    string
+}
+
+func (n *taxReportNotification) GetSubscriptionID() uint64 {
+	return n.SubscriptionID
+}
+
+func (n *taxReportNotification) GetEpoch() uint64 {
+	return n.Epoch
+}
+
+func (n *taxReportNotification) GetEventName() types.EventName {
+	return types.TaxReportEventName
+}
+
+func (n *taxReportNotification) GetInfo(includeUrl bool) string {
+	generalPart := fmt.Sprint(`New monthly report is ready to download`)
+	if includeUrl {
+		url := fmt.Sprintf("https://%s/rewards/hist/download?%s", utils.Config.Frontend.SiteDomain, n.EventFilter)
+
+		return generalPart + " " + url
+	}
+	return generalPart
+}
+
+func (n *taxReportNotification) GetTitle() string {
+	return fmt.Sprint("New report ready")
+}
+
+func (n *taxReportNotification) GetEventFilter() string {
+	return n.EventFilter
+}
+
+func collectTaxReportNotificationNotifications(notificationsByUserID map[uint64]map[types.EventName][]types.Notification, eventName types.EventName) error {
+	tNow := time.Now()
+	firstDay := time.Date(tNow.Year(), tNow.Month(), 1, 0, 0, 0, 0, time.UTC)
+	lastDay := firstDay.AddDate(0, 1, 0).Add(-time.Nanosecond)
+	if tNow.Year() == lastDay.Year() && tNow.Month() == lastDay.Month() && tNow.Day() == lastDay.Day() { // Send the reports at the end of the month
+		var dbResult []struct {
+			SubscriptionID uint64 `db:"id"`
+			UserID         uint64 `db:"user_id"`
+			Epoch          uint64 `db:"created_epoch"`
+			EventFilter    string `db:"event_filter"`
+		}
+
+		err := db.DB.Select(&dbResult, `
+			SELECT us.id, us.user_id, us.created_epoch, us.event_filter                 
+			FROM users_subscriptions AS us
+			WHERE us.event_name=$1 AND (us.last_sent_ts <= NOW() - INTERVAL '2 DAY' OR us.last_sent_ts IS NULL);
+			`,
+			eventName)
+
+		if err != nil {
+			return err
+		}
+
+		for _, r := range dbResult {
+			n := &taxReportNotification{
+				SubscriptionID: r.SubscriptionID,
+				UserID:         r.UserID,
+				Epoch:          r.Epoch,
+				EventFilter:    r.EventFilter,
+			}
+			if _, exists := notificationsByUserID[r.UserID]; !exists {
+				notificationsByUserID[r.UserID] = map[types.EventName][]types.Notification{}
+			}
+			if _, exists := notificationsByUserID[r.UserID][n.GetEventName()]; !exists {
+				notificationsByUserID[r.UserID][n.GetEventName()] = []types.Notification{}
+			}
+			notificationsByUserID[r.UserID][n.GetEventName()] = append(notificationsByUserID[r.UserID][n.GetEventName()], n)
+		}
 	}
 
 	return nil

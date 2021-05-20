@@ -32,7 +32,7 @@ func Eth1Deposits(w http.ResponseWriter, r *http.Request) {
 	}
 
 	pageData.Stats = services.GetLatestStats()
-	pageData.DepositContract = utils.Config.Indexer.Eth1DepositContractAddress
+	pageData.DepositContract = utils.Config.Eth1DepositContractAddress
 
 	data := InitPageData(w, r, "eth1Deposits", "/validators/eth1deposits", "Eth1 Deposits")
 	data.HeaderAd = true
@@ -145,11 +145,11 @@ func Eth1DepositsData(w http.ResponseWriter, r *http.Request) {
 func Eth1DepositsLeaderboard(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 
-	data := InitPageData(w, r, "eth1Deposits", "/validators/eth1leaderboard", "Eth1 Deposits Leaderboard")
+	data := InitPageData(w, r, "eth1Deposits", "/validators/eth1leaderboard", "Eth1 Deposits")
 	data.HeaderAd = true
 
 	data.Data = types.EthOneDepositLeaderBoardPageData{
-		DepositContract: utils.Config.Indexer.Eth1DepositContractAddress,
+		DepositContract: utils.Config.Eth1DepositContractAddress,
 	}
 
 	err := eth1DepositsLeaderboardTemplate.ExecuteTemplate(w, "layout", data)

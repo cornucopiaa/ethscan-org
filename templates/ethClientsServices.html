@@ -1,5 +1,6 @@
 {{ define "js"}}
-<script src="/bundle/js/requestInterval.js"></script>
+<script src="/js/requestInterval.js"></script>
+{{ .CsrfField }}
 {{end}}
 
 {{ define "css"}}
@@ -7,6 +8,10 @@
 {{end}}
 
 {{ define "content"}}
+        {{if .User.Authenticated}}
+            {{if dismissClientNotification .User.UserID}}
+            {{end}} 
+        {{end}}
     {{with .Data}}
         <section style="background: var(--bg-color-light)">
             <div class="container">
@@ -91,6 +96,12 @@
                                 transform="translate(-139.94562 -244.02393)" fill="#2f2e41" /></svg>
                     </div>
                 </div>
+                {{if not $.User.Authenticated}}
+                <div class="d-flex align-items-center justify-content-center pb-2">
+                    <button class="btn btn-sm bg-primary mr-3" type="button" onclick='window.location.replace("/register")'>SignUp</button>
+                    <div>to receive notifications about your favorite ETH clients </div>
+                </div>
+                {{end}}
             </div>
         </section>
         <div class="container mt-2">
@@ -109,6 +120,9 @@
                                     <th>Latest update</th>
                                     <th>Social media</th>
                                     <th>Support</th>
+                                    {{if $.User.Authenticated}}
+                                    <th>Subscribe</th>
+                                    {{end}}
                                 </tr>
                                 </thead>
                                 <tbody>
@@ -117,7 +131,7 @@
                                                     href="https://geth.ethereum.org/">Geth</a></td>
                                         <td data-column="Language">Go</td>
                                         <td data-column="Network share"><a
-                                                    href="https://ethernodes.org">{{.Geth.NetworkShare}}</a></td>
+                                                    href="https://ethernodes.org">{{ if .Geth.NetworkShare}}{{.Geth.NetworkShare}}{{else}}N/a{{end}}</a></td>
                                         <td data-column="Latest update"><a
                                                     href="https://github.com/ethereum/go-ethereum/releases">{{.Geth.ClientReleaseVersion}}</a> - {{.Geth.ClientReleaseDate}} </td>
                                         <td data-column="Social media">
@@ -126,13 +140,16 @@
                                         <a href="https://twitter.com/go_ethereum" target="_blank"><i
                                                 class="fab fa-twitter ml-1 mr-1"></i></a></td>
                                         <td data-column="Support">N/A</td>
+                                        {{if $.User.Authenticated}}
+                                        <td><input id="geth-checkbox" type="checkbox" data-toggle="toggle" {{if isUserSubscribed $.User.UserID "geth"}} checked {{end}} onchange="updateUserSubscription('geth-checkbox', 'eth_client_update', 'geth')"/></td>
+                                        {{end}}
                                     </tr>
                                     <tr>
                                         <td data-column="Name"><a
                                                     href="https://nethermind.io/">Nethermind</a></td>
                                         <td data-column="Language">.NET</td>
                                         <td data-column="Network share"><a
-                                                    href="https://ethernodes.org">{{.Nethermind.NetworkShare}}</a></td>
+                                                    href="https://ethernodes.org">{{ if .Nethermind.NetworkShare}}{{.Nethermind.NetworkShare}}{{else}}N/a{{end}}</a></td>
                                         <td data-column="Latest update"><a
                                                     href="https://github.com/NethermindEth/nethermind/releases">{{.Nethermind.ClientReleaseVersion}}</a> - {{.Nethermind.ClientReleaseDate}}</td>
                                         <td data-column="Social media">
@@ -143,13 +160,16 @@
                                         </td>
                                         <td data-column="Support"><a
                                                     href="https://gitcoin.co/grants/142/nethermind">Gitcoin</a></td>
+                                        {{if $.User.Authenticated}}
+                                        <td><input id="nethermind-checkbox" type="checkbox" data-toggle="toggle" {{if isUserSubscribed $.User.UserID "nethermind"}} checked {{end}} onchange="updateUserSubscription('nethermind-checkbox', 'eth_client_update', 'nethermind')"/></td>
+                                        {{end}}
                                     </tr>
                                     <tr>
                                         <td data-column="Name"><a
                                                     href="https://openethereum.org/">Open Ethereum </a></td>
                                         <td data-column="Language">Rust</td>
                                         <td data-column="Network share"><a
-                                                    href="https://ethernodes.org">{{.OpenEthereum.NetworkShare}}</a></td>
+                                                    href="https://ethernodes.org">{{ if .OpenEthereum.NetworkShare}}{{.OpenEthereum.NetworkShare}}{{else}}N/a{{end}}</a></td>
                                         <td data-column="Latest update"><a
                                                     href="https://github.com/openethereum/openethereum/releases">{{.OpenEthereum.ClientReleaseVersion}}</a> - {{.OpenEthereum.ClientReleaseDate}}</td>
                                         <td data-column="Social media">
@@ -160,13 +180,16 @@
                                         </td>
                                         <td data-column="Support"><a
                                                     href="https://gitcoin.co/grants/1415/openethereum-ex-parity-client">Gitcoin</a></td>
+                                        {{if $.User.Authenticated}}
+                                        <td><input id="openethereum-checkbox" type="checkbox" data-toggle="toggle" {{if isUserSubscribed $.User.UserID "openethereum"}} checked {{end}} onchange="updateUserSubscription('openethereum-checkbox', 'eth_client_update', 'openethereum')"/></td>
+                                        {{end}}
                                     </tr>
                                     <tr>
                                         <td data-column="Name"><a
                                                     href="https://besu.hyperledger.org/en/stable/">Besu </a></td>
                                         <td data-column="Language">Java</td>
                                         <td data-column="Network share"><a
-                                                    href="https://ethernodes.org">{{.Besu.NetworkShare}}</a></td>
+                                                    href="https://ethernodes.org">{{ if .Besu.NetworkShare}}{{.Besu.NetworkShare}}{{else}}N/a{{end}}</a></td>
                                         <td data-column="Latest update"><a
                                                     href="https://github.com/hyperledger/besu/releases">{{.Besu.ClientReleaseVersion}}</a> - {{.Besu.ClientReleaseDate}}</td>
                                         <td data-column="Social media">
@@ -176,6 +199,9 @@
                                                 class="fab fa-twitter ml-1 mr-1"></i></a>
                                         </td>
                                         <td data-column="Support">N/A</td>
+                                        {{if $.User.Authenticated}}
+                                        <td><input id="besu-checkbox" type="checkbox" data-toggle="toggle" {{if isUserSubscribed $.User.UserID "besu"}} checked {{end}} onchange="updateUserSubscription('besu-checkbox', 'eth_client_update', 'besu')"/></td>
+                                        {{end}}
                                     </tr>
                                 </tbody>
                             </table>
@@ -198,6 +224,9 @@
                                     <th>Latest update</th>
                                     <th>Social media</th>
                                     <th>Support</th>
+                                    {{if $.User.Authenticated}}
+                                    <th>Subscribe</th>
+                                    {{end}}
                                 </tr>
                                 </thead>
                                 <tbody>
@@ -214,6 +243,9 @@
                                                             class="fab fa-twitter ml-1 mr-1"></i></a>
                                                                 </td>
                                         <td data-column="Support">N/A</td>
+                                        {{if $.User.Authenticated}}
+                                        <td><input id="teku-checkbox" type="checkbox" data-toggle="toggle" {{if isUserSubscribed $.User.UserID "teku"}} checked {{end}} onchange="updateUserSubscription('teku-checkbox', 'eth_client_update', 'teku')"/></td>
+                                        {{end}}
                                     </tr>
                                     <tr>
                                         <td data-column="Name"><a
@@ -229,6 +261,9 @@
                                                         </td>
                                         <td data-column="Support"><a
                                                     href="https://gitcoin.co/grants/24/prysm-by-prysmatic-labs">Gitcoin</a></td>
+                                        {{if $.User.Authenticated}}
+                                        <td><input id="prysm-checkbox" type="checkbox" data-toggle="toggle" {{if isUserSubscribed $.User.UserID "prysm"}} checked {{end}} onchange="updateUserSubscription('prysm-checkbox', 'eth_client_update', 'prysm')"/></td>
+                                        {{end}}
                                     </tr>
                                     <tr>
                                         <td data-column="Name"><a
@@ -244,6 +279,9 @@
                                                         </td>
                                         <td data-column="Support"><a
                                                     href="https://gitcoin.co/grants/137/nimbus">Gitcoin</a></td>
+                                        {{if $.User.Authenticated}}
+                                        <td><input id="nimbus-checkbox" type="checkbox" data-toggle="toggle" {{if isUserSubscribed $.User.UserID "nimbus"}} checked {{end}} onchange="updateUserSubscription('nimbus-checkbox', 'eth_client_update', 'nimbus')"/></td>
+                                        {{end}}
                                     </tr>
                                     <tr>
                                         <td data-column="Name"><a
@@ -259,6 +297,9 @@
                                                         </td>
                                         <td data-column="Support"><a
                                                     href="https://gitcoin.co/grants/25/lighthouse-ethereum-20-client">Gitcoin</a></td>
+                                        {{if $.User.Authenticated}}
+                                        <td><input id="lighthouse-checkbox" type="checkbox" data-toggle="toggle" {{if isUserSubscribed $.User.UserID "lighthouse"}} checked {{end}} onchange="updateUserSubscription('lighthouse-checkbox', 'eth_client_update', 'lighthouse')"/></td>
+                                        {{end}}
                                     </tr>
                                 </tbody>
                             </table>
@@ -275,7 +316,7 @@
                                 <h1 class="h4 ">Request to add your Ethereum 2.0 Client Service</h1>
                                                     <p class="text-muted col-md-8 px-0 mx-auto">If you have an Ethereum 2.0 Client Service and want it to
                                                         be listed above please create a <a class=""
-                                                                                            href="https://github.com/nobd/ethscan-org/blob/master/templates/ethClientsServices.html">pull
+                                                                                            href="https://github.com/gobitfly/eth2-beaconchain-explorer/blob/master/templates/ethClientsServices.html">pull
                                                             request <i class="fab fa-github"></i></a></p>
                             </div>
                         </div>
@@ -284,4 +325,47 @@
             </section>
         </div>
     {{end}}
+    <script src="/js/jquery.min.js"></script>
+    <script>
+        {{if .User.Authenticated}}
+            if (window.location.pathname!="/user/ethClients"){
+                window.location.replace("/user/ethClients");
+            }
+        {{end}}
+    </script>
+    <script>
+        function updateUserSubscription(checkboxID, event_name, event_filter){
+            let csrfToken = document.getElementsByName("CsrfField")[0].value
+
+            if ($('#'+checkboxID).prop("checked")){
+                fetch('/user/notifications/subscribe?filter=' + event_filter + '&event=' + event_name, {
+                    method: 'POST',
+                    headers: {"X-CSRF-Token": csrfToken},
+                    credentials: 'include'
+                }).then(function (response) {
+                    if (response.status === 200) {
+                        $('#'+checkboxID).prop("checked", true)
+                    //alert("You Just Subscribed to "+event_filter+" notifications")
+                    } else {$('#'+checkboxID).prop("checked", false)}
+                }).catch(function (err) {
+                    
+                    console.log(err)
+                })
+            } else {
+                // unsubscribe
+                fetch('/user/notifications/unsubscribe?filter=' + event_filter + '&event=' + event_name, {
+                    method: 'POST',
+                    headers: {"X-CSRF-Token": csrfToken},
+                    credentials: 'include'
+                }).then(function (response) {
+                    if (response.status === 200) {
+                        $('#'+checkboxID).prop("checked", false)
+                    //alert("You Just Unsubscribed from "+event_filter+" notifications")
+                    } else {$('#'+checkboxID).prop("checked", true)}
+                }).catch(function (err) {
+                    console.log(err)
+                })
+            }
+        }
+    </script>
 {{end}}

@@ -2,6 +2,7 @@ package utils
 
 import (
 	"bytes"
+	"database/sql"
 	"eth2-exporter/price"
 	"fmt"
 	"html"
@@ -65,6 +66,27 @@ func FormatAttestorAssignmentKey(AttesterSlot, CommitteeIndex, MemberIndex uint6
 func FormatBalance(balanceInt uint64, currency string) template.HTML {
 	exchangeRate := ExchangeRateForCurrency(currency)
 	balance := float64(balanceInt) / float64(1e9)
+
+	p := message.NewPrinter(language.English)
+	rb := []rune(p.Sprintf("%.2f", balance*exchangeRate))
+	// remove trailing zeros
+	if rb[len(rb)-2] == '.' || rb[len(rb)-3] == '.' {
+		for rb[len(rb)-1] == '0' {
+			rb = rb[:len(rb)-1]
+		}
+		if rb[len(rb)-1] == '.' {
+			rb = rb[:len(rb)-1]
+		}
+	}
+	return template.HTML(string(rb) + " " + currency)
+}
+
+func FormatBalanceSql(balanceInt sql.NullInt64, currency string) template.HTML {
+	if !balanceInt.Valid {
+		return template.HTML("0 " + currency)
+	}
+	exchangeRate := ExchangeRateForCurrency(currency)
+	balance := float64(balanceInt.Int64) / float64(1e9)
 
 	p := message.NewPrinter(language.English)
 	rb := []rune(p.Sprintf("%.2f", balance*exchangeRate))
@@ -305,7 +327,7 @@ func FormatGlobalParticipationRate(e uint64, r float64, currency string) templat
 	rr := fmt.Sprintf("%.1f%%", r*100)
 	tpl := `
 	<div style="position:relative;width:inherit;height:inherit;">
-	  %.8[1]g <small class="text-muted ml-3">(%[2]v)</small>
+	  %.0[1]f <small class="text-muted ml-3">(%[2]v)</small>
 	  <div class="progress" style="position:absolute;bottom:-6px;width:100%%;height:4px;">
 		<div class="progress-bar" role="progressbar" style="width: %[2]v;" aria-valuenow="%[2]v" aria-valuemin="0" aria-valuemax="100"></div>
 	  </div>
@@ -352,12 +374,66 @@ func FormatIncome(balanceInt int64, currency string) template.HTML {
 	exchangeRate := ExchangeRateForCurrency(currency)
 	balance := float64(balanceInt) / float64(1e9)
 
+	p := message.NewPrinter(language.English)
+
+	decimals := "%.2f"
+
+	if currency == "ETH" {
+		decimals = "%.5f"
+	}
+
+	rb := []rune(p.Sprintf(decimals, balance*exchangeRate))
+	// remove trailing zeros
+	if rb[len(rb)-2] == '.' || rb[len(rb)-3] == '.' {
+		for rb[len(rb)-1] == '0' {
+			rb = rb[:len(rb)-1]
+		}
+		if rb[len(rb)-1] == '.' {
+			rb = rb[:len(rb)-1]
+		}
+	}
+
+	if balance > 0 {
+		return template.HTML(fmt.Sprintf(`<span class="text-success"><b>+%s %v</b></span>`, string(rb), currency))
+	} else if balance < 0 {
+		return template.HTML(fmt.Sprintf(`<span class="text-danger"><b>%s %v</b></span>`, string(rb), currency))
+	} else {
+		return template.HTML(fmt.Sprintf(`<b>%s %v</b>`, string(rb), currency))
+	}
+}
+
+// FormatMoney will return a string for a balance
+func FormatMoney(money float64) template.HTML {
+	if money > 0 {
+		return template.HTML(fmt.Sprintf(`<span class="text-success"><b>+%.2f</b></span>`, money))
+	} else {
+		return template.HTML(fmt.Sprintf(`<span class="text-danger"><b>%.2f</b></span>`, money))
+	}
+}
+
+func FormatIncomeSql(balanceInt sql.NullInt64, currency string) template.HTML {
+
+	if !balanceInt.Valid {
+		return template.HTML(fmt.Sprintf(`<b>0 %v</b>`, currency))
+	}
+
+	exchangeRate := ExchangeRateForCurrency(currency)
+	balance := float64(balanceInt.Int64) / float64(1e9)
+
 	if balance > 0 {
 		return template.HTML(fmt.Sprintf(`<span class="text-success"><b>+%.4f %v</b></span>`, balance*exchangeRate, currency))
 	} else if balance < 0 {
 		return template.HTML(fmt.Sprintf(`<span class="text-danger"><b>%.4f %v</b></span>`, balance*exchangeRate, currency))
 	} else {
 		return template.HTML(fmt.Sprintf(`<b>%.4f %v</b>`, balance*exchangeRate, currency))
+	}
+}
+
+func FormatSqlInt64(i sql.NullInt64) template.HTML {
+	if !i.Valid {
+		return "-"
+	} else {
+		return template.HTML(fmt.Sprintf(`%v`, i.Int64))
 	}
 }
 
@@ -538,6 +614,24 @@ func FormatAttestationInclusionEffectiveness(eff float64) template.HTML {
 	}
 }
 
+func FormatPercentageColored(percentage float64, tooltipText string) template.HTML {
+	if math.IsInf(percentage, 0) || math.IsNaN(percentage) {
+		percentage = 0
+	} else {
+		percentage = percentage * 100
+	}
+	if percentage == 100 {
+		return template.HTML(fmt.Sprintf("<span class=\"text-success\">%.0f%% <i class=\"fas fa-grin-stars\"></i></span>", percentage))
+	} else if percentage >= 90 {
+		return template.HTML(fmt.Sprintf("<span class=\"text-success\">%.0f%% <i class=\"fas fa-smile\"></i></span>", percentage))
+	} else if percentage >= 80 {
+		return template.HTML(fmt.Sprintf("<span class=\"text-warning\">%.0f%% <i class=\"fas fa-smile\"></i></span>", percentage))
+	} else if percentage >= 60 {
+		return template.HTML(fmt.Sprintf("<span class=\"text-warning\">%.0f%% <i class=\"fas fa-meh\"></i></span>", percentage))
+	}
+	return template.HTML(fmt.Sprintf("<span class=\"text-danger\">%.0f%% <i class=\"fas fa-frown\"></i></span>", percentage))
+}
+
 func DerefString(str *string) string {
 	if str != nil {
 		return *str
@@ -549,4 +643,12 @@ func DerefString(str *string) string {
 func TrLang(lang string, key string) template.HTML {
 	I18n := getLocaliser()
 	return template.HTML(I18n.Tr(lang, key))
+}
+
+func KFormatterEthPrice(currency int) string {
+	if currency > 999 {
+		ethTruncPrice := fmt.Sprint(float64(int((float64(currency)/float64(1000))*10))/float64(10)) + "k"
+		return ethTruncPrice
+	}
+	return fmt.Sprint(currency)
 }

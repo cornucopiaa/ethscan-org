@@ -24,6 +24,8 @@ const (
 	NetworkValidatorExitQueueFullEventName          EventName = "network_validator_exit_queue_full"
 	NetworkValidatorExitQueueNotFullEventName       EventName = "network_validator_exit_queue_not_full"
 	NetworkLivenessIncreasedEventName               EventName = "network_liveness_increased"
+	EthClientUpdateEventName                        EventName = "eth_client_update"
+	TaxReportEventName                              EventName = "user_tax_report"
 )
 
 var EventNames = []EventName{
@@ -41,6 +43,8 @@ var EventNames = []EventName{
 	NetworkValidatorExitQueueFullEventName,
 	NetworkValidatorExitQueueNotFullEventName,
 	NetworkLivenessIncreasedEventName,
+	EthClientUpdateEventName,
+	TaxReportEventName,
 }
 
 func GetDisplayableEventName(event EventName) string {
@@ -68,6 +72,7 @@ type Notification interface {
 	GetEpoch() uint64
 	GetInfo(includeUrl bool) string
 	GetTitle() string
+	GetEventFilter() string
 }
 
 type Subscription struct {

@@ -9,26 +9,18 @@ import (
 	"eth2-exporter/version"
 	"fmt"
 	"net/http"
-	"unicode"
+	"strings"
+	"time"
 
 	"github.com/gorilla/sessions"
 )
 
-func Ucfirst(str string) string {
-	for _, v := range str {
-		u := string(unicode.ToUpper(v))
-		return u + str[len(u):]
-	}
-	return ""
-}
-
 func InitPageData(w http.ResponseWriter, r *http.Request, active, path, title string) *types.PageData {
-	name := Ucfirst(utils.Config.Frontend.SiteDomain)
 	data := &types.PageData{
 		HeaderAd: false,
 		Meta: &types.Meta{
-			Title:       fmt.Sprintf("%v | Ethereum 2 (ETH 2) Blockchain Explorer", name),
-			Description: fmt.Sprintf("%v provides easy to use Ethereum 2 block explorer that allows you to search for ETH 2 addresses, transactions, prices, tokens, validators, and epochs.  ", name),
+			Title:       fmt.Sprintf("%v - %v - beaconcha.in - %v", utils.Config.Frontend.SiteName, title, time.Now().Year()),
+			Description: "beaconcha.in makes the Ethereum 2.0. beacon chain accessible to non-technical end users",
 			Path:        path,
 			GATag:       utils.Config.Frontend.GATag,
 		},
@@ -42,13 +34,59 @@ func InitPageData(w http.ResponseWriter, r *http.Request, active, path, title st
 		CurrentEpoch:          services.LatestEpoch(),
 		CurrentSlot:           services.LatestSlot(),
 		FinalizationDelay:     services.FinalizationDelay(),
-		EthPrice:              price.GetEthPrice("USD"),
+		EthPrice:              0,
+		EthRoundPrice:         0,
+		EthTruncPrice:         "",
+		UsdRoundPrice:         price.GetEthRoundPrice(price.GetEthPrice("USD")),
+		UsdTruncPrice:         "",
+		EurRoundPrice:         price.GetEthRoundPrice(price.GetEthPrice("EUR")),
+		EurTruncPrice:         "",
+		GbpRoundPrice:         price.GetEthRoundPrice(price.GetEthPrice("GBP")),
+		GbpTruncPrice:         "",
+		CnyRoundPrice:         price.GetEthRoundPrice(price.GetEthPrice("CNY")),
+		CnyTruncPrice:         "",
+		RubRoundPrice:         price.GetEthRoundPrice(price.GetEthPrice("RUB")),
+		RubTruncPrice:         "",
+		CadRoundPrice:         price.GetEthRoundPrice(price.GetEthPrice("CAD")),
+		CadTruncPrice:         "",
+		AudRoundPrice:         price.GetEthRoundPrice(price.GetEthPrice("AUD")),
+		AudTruncPrice:         "",
+		JpyRoundPrice:         price.GetEthRoundPrice(price.GetEthPrice("JPY")),
+		JpyTruncPrice:         "",
 		Mainnet:               utils.Config.Chain.Mainnet,
-		DepositContract:       utils.Config.Indexer.Eth1DepositContractAddress,
+		DepositContract:       utils.Config.Eth1DepositContractAddress,
 		Currency:              GetCurrency(r),
-		InfoBanner:            ethclients.GetBannerClients(),
+		ClientsUpdated:        ethclients.ClientsUpdated(),
+		Phase0:                utils.Config.Chain.Phase0,
+		Lang:                  "en-US",
+		// InfoBanner:            ethclients.GetBannerClients(),
 	}
+	data.EthPrice = price.GetEthPrice(data.Currency)
 	data.ExchangeRate = price.GetEthPrice(data.Currency)
+	data.EthRoundPrice = price.GetEthRoundPrice(data.EthPrice)
+	data.EthTruncPrice = utils.KFormatterEthPrice(data.EthRoundPrice)
+	data.UsdTruncPrice = utils.KFormatterEthPrice(data.UsdRoundPrice)
+	data.EurTruncPrice = utils.KFormatterEthPrice(data.EurRoundPrice)
+	data.GbpTruncPrice = utils.KFormatterEthPrice(data.GbpRoundPrice)
+	data.CnyTruncPrice = utils.KFormatterEthPrice(data.CnyRoundPrice)
+	data.RubTruncPrice = utils.KFormatterEthPrice(data.RubRoundPrice)
+	data.CadTruncPrice = utils.KFormatterEthPrice(data.CadRoundPrice)
+	data.AudTruncPrice = utils.KFormatterEthPrice(data.AudRoundPrice)
+	data.JpyTruncPrice = utils.KFormatterEthPrice(data.JpyRoundPrice)
+
+	acceptedLangs := strings.Split(r.Header.Get("Accept-Language"), ",")
+	if len(acceptedLangs) > 0 {
+		if strings.Contains(acceptedLangs[0], "ru") || strings.Contains(acceptedLangs[0], "RU") {
+			data.Lang = "ru-RU"
+		}
+	}
+
+	for _, v := range r.Cookies() {
+		if v.Name == "language" {
+			data.Lang = v.Value
+			break
+		}
+	}
 
 	return data
 }

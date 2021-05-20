@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"eth2-exporter/db"
+	"eth2-exporter/price"
 	"eth2-exporter/services"
 	"eth2-exporter/types"
 	"eth2-exporter/utils"
@@ -69,6 +70,38 @@ func ApiHealthz(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Fprintf(w, "OK. Last epoch is from %v ago", time.Since(epochTime))
+}
+
+// ApiHealthzLoadbalancer godoc
+// @Summary Health of the explorer-api regarding having a healthy connection to the database
+// @Tags Health
+// @Description Health endpoint for montitoring if the explorer-api
+// @Produce  text/plain
+// @Success 200 {object} string
+// @Router /api/healthz-loadbalancer [get]
+func ApiHealthzLoadbalancer(w http.ResponseWriter, r *http.Request) {
+
+	w.Header().Set("Content-Type", "text/plain")
+
+	lastEpoch, err := db.GetLatestEpoch()
+
+	if err != nil {
+		http.Error(w, "Internal server error: could not retrieve latest epoch from the db", 503)
+		return
+	}
+
+	if 18446744073709551615 == utils.Config.Chain.GenesisTimestamp {
+		fmt.Fprint(w, "OK. No GENESIS_TIMESTAMP defined yet")
+		return
+	}
+
+	genesisTime := time.Unix(int64(utils.Config.Chain.GenesisTimestamp), 0)
+	if genesisTime.After(time.Now()) {
+		fmt.Fprintf(w, "OK. Genesis in %v (%v)", time.Until(genesisTime), genesisTime)
+		return
+	}
+
+	fmt.Fprintf(w, "OK. Last epoch is from %v ago", time.Since(utils.EpochToTime(lastEpoch)))
 }
 
 // ApiEpoch godoc
@@ -244,6 +277,27 @@ func ApiBlockDeposits(w http.ResponseWriter, r *http.Request) {
 	returnQueryResults(rows, j, r)
 }
 
+// ApiValidatorQueue godoc
+// @Summary Get the current validator queue
+// @Tags Block
+// @Description Returns the current number of validators entering and exiting the beacon chain
+// @Produce  json
+// @Success 200 {object} string
+// @Router /api/v1/validators/queue [get]
+func ApiValidatorQueue(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	j := json.NewEncoder(w)
+
+	rows, err := db.DB.Query("SELECT entering_validators_count as beaconchain_entering, exiting_validators_count as beaconchain_exiting FROM queue ORDER BY ts DESC LIMIT 1")
+	if err != nil {
+		sendErrorResponse(j, r.URL.String(), "could not retrieve db results")
+		return
+	}
+	defer rows.Close()
+
+	returnQueryResults(rows, j, r)
+}
+
 // ApiBlockAttesterSlashings godoc
 // @Summary Get the attester slashings included in a specific block
 // @Tags Block
@@ -387,7 +441,32 @@ func ApiValidator(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rows, err := db.DB.Query("SELECT validatorindex, pubkey, withdrawableepoch, withdrawalcredentials, balance, effectivebalance, slashed, activationeligibilityepoch, activationepoch, exitepoch, lastattestationslot, name, status FROM validators WHERE validatorindex = ANY($1) OR pubkey = ANY($2) ORDER BY validatorindex", pq.Array(queryIndices), queryPubkeys)
+	rows, err := db.DB.Query("SELECT validatorindex, pubkey, withdrawableepoch, withdrawalcredentials, balance, effectivebalance, slashed, activationeligibilityepoch, activationepoch, exitepoch, lastattestationslot, status, validator_names.name FROM validators LEFT JOIN validator_names ON validator_names.publickey = validators.pubkey WHERE validatorindex = ANY($1) OR pubkey = ANY($2) ORDER BY validatorindex", pq.Array(queryIndices), queryPubkeys)
+	if err != nil {
+		sendErrorResponse(j, r.URL.String(), "could not retrieve db results")
+		return
+	}
+	defer rows.Close()
+
+	returnQueryResults(rows, j, r)
+}
+
+// ApiValidatorDailyStats godoc
+// @Summary Get the daily validator stats by the validator index
+// @Tags Validator
+// @Produce  json
+// @Param  index path string true "Validator index"
+// @Success 200 {object} string
+// @Router /api/v1/validator/stats/{index} [get]
+func ApiValidatorDailyStats(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	j := json.NewEncoder(w)
+	vars := mux.Vars(r)
+
+	index := vars["index"]
+
+	rows, err := db.DB.Query("SELECT * FROM validator_stats WHERE validatorindex = $1 ORDER BY day DESC", index)
 	if err != nil {
 		sendErrorResponse(j, r.URL.String(), "could not retrieve db results")
 		return
@@ -448,7 +527,7 @@ func ApiValidatorBalanceHistory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rows, err := db.DB.Query("SELECT validator_balances.* FROM validator_balances LEFT JOIN validators ON validators.validatorindex = validator_balances.validatorindex WHERE validators.validatorindex = ANY($1) OR validators.pubkey = ANY($2) ORDER BY validatorindex, epoch DESC LIMIT 100", pq.Array(queryIndices), queryPubkeys)
+	rows, err := db.DB.Query("SELECT validator_balances_p.* FROM validator_balances_p LEFT JOIN validators ON validators.validatorindex = validator_balances_p.validatorindex WHERE validators.validatorindex = ANY($1) OR validators.pubkey = ANY($2) ORDER BY validatorindex, week desc, epoch DESC LIMIT 100", pq.Array(queryIndices), queryPubkeys)
 	if err != nil {
 		sendErrorResponse(j, r.URL.String(), "could not retrieve db results")
 		return
@@ -486,6 +565,60 @@ func ApiValidatorPerformance(w http.ResponseWriter, r *http.Request) {
 	defer rows.Close()
 
 	returnQueryResults(rows, j, r)
+}
+
+// ApiValidatorAttestationEfficiency godoc
+// @Summary Get the current performance of up to 100 validators
+// @Tags Validator
+// @Produce  json
+// @Param  index path string true "Up to 100 validator indicesOrPubkeys, comma separated"
+// @Success 200 {object} string
+// @Router /api/v1/validator/{indexOrPubkey}/attestationefficiency [get]
+func ApiValidatorAttestationEfficiency(w http.ResponseWriter, r *http.Request) {
+
+	w.Header().Set("Content-Type", "application/json")
+
+	j := json.NewEncoder(w)
+	vars := mux.Vars(r)
+
+	epoch := int64(services.LatestEpoch()) - 100
+	if epoch < 0 {
+		epoch = 0
+	}
+
+	queryIndices, queryPubkeys, err := parseApiValidatorParam(vars["indexOrPubkey"])
+	if err != nil {
+		sendErrorResponse(j, r.URL.String(), err.Error())
+		return
+	}
+
+	rows, err := getAttestationEfficiencyQuery(epoch, queryIndices, queryPubkeys)
+	if err != nil {
+		logger.Error(err)
+		sendErrorResponse(j, r.URL.String(), "could not retrieve db results")
+		return
+	}
+	defer rows.Close()
+
+	returnQueryResults(rows, j, r)
+}
+
+func getAttestationEfficiencyQuery(epoch int64, queryIndices []uint64, queryPubkeys pq.ByteaArray) (*sql.Rows, error) {
+	return db.DB.Query(`
+	SELECT aa.validatorindex, validators.pubkey, COALESCE(
+		AVG(1 + inclusionslot - COALESCE((
+			SELECT MIN(slot)
+			FROM blocks
+			WHERE slot > aa.attesterslot AND blocks.status = '1'
+		), 0)
+	), 0)::float AS attestation_efficiency
+	FROM attestation_assignments_p aa
+	INNER JOIN blocks ON blocks.slot = aa.inclusionslot AND blocks.status <> '3'
+	INNER JOIN validators ON validators.validatorindex = aa.validatorindex
+	WHERE aa.week >= $1 / 1575 AND aa.epoch > $1 AND (validators.validatorindex = ANY($2) OR validators.pubkey = ANY($3)) AND aa.inclusionslot > 0
+	GROUP BY aa.validatorindex, validators.pubkey
+	ORDER BY aa.validatorindex
+	`, epoch, pq.Array(queryIndices), pq.Array(queryPubkeys))
 }
 
 // ApiValidatorLeaderboard godoc
@@ -564,7 +697,7 @@ func ApiValidatorAttestations(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rows, err := db.DB.Query("SELECT attestation_assignments.* FROM attestation_assignments LEFT JOIN validators ON validators.validatorindex = attestation_assignments.validatorindex WHERE (validators.validatorindex = ANY($1) OR validators.pubkey = ANY($2)) AND epoch > $3 ORDER BY validatorindex, epoch desc LIMIT 100", pq.Array(queryIndices), queryPubkeys, services.LatestEpoch()-10)
+	rows, err := db.DB.Query("SELECT attestation_assignments_p.* FROM attestation_assignments_p LEFT JOIN validators ON validators.validatorindex = attestation_assignments_p.validatorindex WHERE (validators.validatorindex = ANY($1) OR validators.pubkey = ANY($2)) AND week >= $3 / 1575 AND epoch > $3 ORDER BY validatorindex, epoch desc LIMIT 100", pq.Array(queryIndices), queryPubkeys, services.LatestEpoch()-10)
 	if err != nil {
 		sendErrorResponse(j, r.URL.String(), "could not retrieve db results")
 		return
@@ -604,11 +737,33 @@ func ApiValidatorProposals(w http.ResponseWriter, r *http.Request) {
 	returnQueryResults(rows, j, r)
 }
 
+// ApiGraffitiwall godoc
+// @Summary Get all pixels that have been painted until now on the graffitiwall
+// @Tags Graffitiwall
+// @Produce  json
+// @Success 200 {object} string
+// @Router /api/v1/graffitiwall [get]
+func ApiGraffitiwall(w http.ResponseWriter, r *http.Request) {
+
+	w.Header().Set("Content-Type", "application/json")
+
+	j := json.NewEncoder(w)
+
+	rows, err := db.DB.Query("SELECT x, y, color, slot, validator FROM graffitiwall ORDER BY x, y LIMIT 1000000")
+	if err != nil {
+		sendErrorResponse(j, r.URL.String(), "could not retrieve db results")
+		return
+	}
+	defer rows.Close()
+
+	returnQueryResults(rows, j, r)
+}
+
 // ApiChart godoc
 // @Summary Returns charts from the page https://ethscan.org/charts as PNG
 // @Tags Charts
 // @Produce  json
-// @Param  chart path string true "Chart name (see https://github.com/nobd/ethscan-org/blob/master/services/charts_updater.go#L20 for all available names)"
+// @Param  chart path string true "Chart name (see https://github.com/gobitfly/eth2-beaconchain-explorer/blob/master/services/charts_updater.go#L20 for all available names)"
 // @Success 200 {object} string
 // @Router /api/v1/chart/{chart} [get]
 func ApiChart(w http.ResponseWriter, r *http.Request) {
@@ -813,6 +968,64 @@ func MobileNotificationUpdatePOST(w http.ResponseWriter, r *http.Request) {
 	OKResponse(w, r)
 }
 
+func GetMobileWidgetStats(w http.ResponseWriter, r *http.Request) {
+
+	w.Header().Set("Content-Type", "application/json")
+	j := json.NewEncoder(w)
+	vars := mux.Vars(r)
+
+	epoch := int64(services.LatestEpoch()) - 100
+	if epoch < 0 {
+		epoch = 0
+	}
+
+	queryIndices, queryPubkeys, err := parseApiValidatorParam(vars["indexOrPubkey"])
+	if err != nil {
+		sendErrorResponse(j, r.URL.String(), err.Error())
+		return
+	}
+
+	rows, err := db.DB.Query(
+		"SELECT pubkey, effectivebalance, slashed, activationeligibilityepoch, "+
+			"activationepoch, exitepoch, lastattestationslot, status, validator_performance.* FROM validators "+
+			"LEFT JOIN validator_performance ON validators.validatorindex = validator_performance.validatorindex "+
+			" WHERE validator_performance.validatorindex = ANY($1) OR pubkey = ANY($2) ORDER BY validator_performance.validatorindex",
+		pq.Array(queryIndices), queryPubkeys,
+	)
+	if err != nil {
+		sendErrorResponse(j, r.URL.String(), "could not retrieve db results")
+		return
+	}
+	defer rows.Close()
+
+	efficiencyRows, err := getAttestationEfficiencyQuery(epoch, queryIndices, queryPubkeys)
+	if err != nil {
+		sendErrorResponse(j, r.URL.String(), "could not retrieve efficiency db results")
+		return
+	}
+	defer efficiencyRows.Close()
+
+	generalData, err := utils.SqlRowsToJSON(rows)
+	if err != nil {
+		sendErrorResponse(j, r.URL.String(), "could not parse db results")
+		return
+	}
+
+	efficiencyData, err := utils.SqlRowsToJSON(efficiencyRows)
+	if err != nil {
+		sendErrorResponse(j, r.URL.String(), "could not parse db results")
+		return
+	}
+
+	data := &types.WidgetResponse{
+		Eff:       efficiencyData,
+		Validator: generalData,
+		Epoch:     epoch,
+	}
+
+	sendOKResponse(j, r.URL.String(), []interface{}{data})
+}
+
 // MobileDeviceSettings godoc
 // @Summary Get your device settings, currently only whether to enable mobile notifcations or not
 // @Tags User
@@ -855,12 +1068,35 @@ func MobileDeviceSettingsPOST(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	j := json.NewEncoder(w)
 
-	notifyEnabled := FormValueOrJSON(r, "notify_enabled") == "true"
+	notifyEnabled := FormValueOrJSON(r, "notify_enabled")
+	active := FormValueOrJSON(r, "active")
 
 	claims := getAuthClaims(r)
+	var userDeviceID uint64
+	var userID uint64
 
-	rows, err2 := db.MobileDeviceSettingsUpdate(claims.UserID, claims.DeviceID, notifyEnabled)
+	if claims == nil {
+		customDeviceID := FormValueOrJSON(r, "id")
+		temp, err := strconv.ParseUint(customDeviceID, 10, 64)
+		if err != nil {
+			logger.Errorf("error parsing id %v | err: %v", customDeviceID, err)
+			sendErrorResponse(j, r.URL.String(), "could not parse id")
+			return
+		}
+		userDeviceID = temp
+		sessionUser := getUser(w, r)
+		if !sessionUser.Authenticated {
+			sendErrorResponse(j, r.URL.String(), "not authenticated")
+		}
+		userID = sessionUser.UserID
+	} else {
+		userDeviceID = claims.DeviceID
+		userID = claims.UserID
+	}
+
+	rows, err2 := db.MobileDeviceSettingsUpdate(userID, userDeviceID, notifyEnabled, active)
 	if err2 != nil {
+		logger.Errorf("could not retrieve db results err: %v", err2)
 		sendErrorResponse(j, r.URL.String(), "could not retrieve db results")
 		return
 	}
@@ -910,8 +1146,80 @@ func MobileTagedValidators(w http.ResponseWriter, r *http.Request) {
 	sendOKResponse(j, r.URL.String(), data)
 }
 
+// TODO Replace app code to work with new income balance dashboard
+// Meanwhile keep old code from Feb 2021 to be app compatible
+func APIDashboardDataBalance(w http.ResponseWriter, r *http.Request) {
+	currency := GetCurrency(r)
+
+	w.Header().Set("Content-Type", "application/json")
+
+	q := r.URL.Query()
+
+	queryValidators, err := parseValidatorsFromQueryString(q.Get("validators"))
+	if err != nil {
+		logger.WithError(err).WithField("route", r.URL.String()).Error("error parsing validators from query string")
+		http.Error(w, "Invalid query", 400)
+		return
+	}
+	if err != nil {
+		http.Error(w, "Invalid query", 400)
+		return
+	}
+	if len(queryValidators) < 1 {
+		http.Error(w, "Invalid query", 400)
+		return
+	}
+	queryValidatorsArr := pq.Array(queryValidators)
+
+	// get data from one week before latest epoch
+	latestEpoch := services.LatestEpoch()
+	oneWeekEpochs := uint64(3600 * 24 * 7 / float64(utils.Config.Chain.SecondsPerSlot*utils.Config.Chain.SlotsPerEpoch))
+	queryOffsetEpoch := uint64(0)
+	if latestEpoch > oneWeekEpochs {
+		queryOffsetEpoch = latestEpoch - oneWeekEpochs
+	}
+
+	query := `
+		SELECT
+			epoch,
+			COALESCE(SUM(effectivebalance),0) AS effectivebalance,
+			COALESCE(SUM(balance),0) AS balance,
+			COUNT(*) AS validatorcount
+		FROM validator_balances_p
+		WHERE validatorindex = ANY($1) AND epoch > $2 AND week >= $2 / 1575
+		GROUP BY epoch
+		ORDER BY epoch ASC`
+
+	data := []*types.DashboardValidatorBalanceHistory{}
+	err = db.DB.Select(&data, query, queryValidatorsArr, queryOffsetEpoch)
+	if err != nil {
+		logger.WithError(err).WithField("route", r.URL.String()).Errorf("error retrieving validator balance history")
+		http.Error(w, "Internal server error", 503)
+		return
+	}
+
+	balanceHistoryChartData := make([][4]float64, len(data))
+	for i, item := range data {
+		balanceHistoryChartData[i][0] = float64(utils.EpochToTime(item.Epoch).Unix() * 1000)
+		balanceHistoryChartData[i][1] = item.ValidatorCount
+		balanceHistoryChartData[i][2] = float64(item.Balance) / 1e9 * price.GetEthPrice(currency)
+		balanceHistoryChartData[i][3] = float64(item.EffectiveBalance) / 1e9 * price.GetEthPrice(currency)
+	}
+
+	err = json.NewEncoder(w).Encode(balanceHistoryChartData)
+	if err != nil {
+		logger.WithError(err).WithField("route", r.URL.String()).Error("error enconding json response")
+		http.Error(w, "Internal server error", 503)
+		return
+	}
+}
+
 func getAuthClaims(r *http.Request) *utils.CustomClaims {
-	return context.Get(r, utils.ClaimsContextKey).(*utils.CustomClaims)
+	claims := context.Get(r, utils.ClaimsContextKey)
+	if claims == nil {
+		return nil
+	}
+	return claims.(*utils.CustomClaims)
 }
 
 func returnQueryResults(rows *sql.Rows, j *json.Encoder, r *http.Request) {
@@ -978,7 +1286,7 @@ func parseApiValidatorParam(origParam string) (indices []uint64, pubkeys pq.Byte
 		} else {
 			index, err := strconv.ParseUint(param, 10, 64)
 			if err != nil {
-				return nil, nil, fmt.Errorf("invalid validator-parameter")
+				return nil, nil, fmt.Errorf("invalid validator-parameter: %v", param)
 			}
 			indices = append(indices, index)
 		}
