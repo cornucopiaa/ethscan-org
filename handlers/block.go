@@ -105,7 +105,7 @@ func Block(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data.Meta.Title = fmt.Sprintf("%v - Slot %v - beaconcha.in - %v", utils.Config.Frontend.SiteName, blockPageData.Slot, time.Now().Year())
+	data.Meta.Title = fmt.Sprintf("%v - Slot %v - ethscan.org - %v", utils.Config.Frontend.SiteName, blockPageData.Slot, time.Now().Year())
 	data.Meta.Path = fmt.Sprintf("/block/%v", blockPageData.Slot)
 
 	blockPageData.Ts = utils.SlotToTime(blockPageData.Slot)
