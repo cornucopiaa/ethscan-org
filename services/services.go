@@ -456,7 +456,6 @@ func LatestState() *types.LatestState {
 	data.AudTruncPrice = utils.KFormatterEthPrice(data.AudRoundPrice)
 	data.JpyRoundPrice = price.GetEthRoundPrice(price.GetEthPrice("JPY"))
 	data.JpyTruncPrice = utils.KFormatterEthPrice(data.JpyRoundPrice)
-
 	return data
 }
 

@@ -29,6 +29,7 @@ type Config struct {
 	} `yaml:"chain"`
 	Eth1DepositContractAddress string `yaml:"eth1DepositContractAddress" envconfig:"INDEXER_ETH1_DEPOSIT_CONTRACT_ADDRESS"`
 	Frontend                   struct {
+		Webroot            string `yaml:"webroot" envconfig:"FRONTEND_WEBROOT"`
 		Kong               string `yaml:"kong" envconfig:"FRONTEND_KONG"`
 		OnlyAPI            bool   `yaml:"onlyAPI" envconfig:"FRONTEND_ONLY_API"`
 		CsrfAuthKey        string `yaml:"csrfAuthKey" envconfig:"FRONTEND_CSRF_AUTHKEY"`

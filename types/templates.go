@@ -53,6 +53,7 @@ type PageData struct {
 	IsUserClientUpdated   func(uint64) bool
 	Phase0                Phase0
 	Lang                  string
+	Webroot               string
 }
 
 // Meta is a struct to hold metadata about the page
