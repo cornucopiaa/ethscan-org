@@ -37,6 +37,8 @@ func Eth1Deposits(w http.ResponseWriter, r *http.Request) {
 	data := InitPageData(w, r, "eth1Deposits", "/validators/eth1deposits", "Eth1 Deposits")
 	data.HeaderAd = true
 	data.Data = pageData
+	data.Meta.Title = "ETH1 Deposits to ETH2 Beacon Chain"
+	data.Meta.Description = "This section displays the deposits made on Eth1 for validators who wish to join the Eth2 Beacon Chain."
 
 	err := eth1DepositsTemplate.ExecuteTemplate(w, "layout", data)
 
@@ -146,7 +148,9 @@ func Eth1DepositsLeaderboard(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 
 	data := InitPageData(w, r, "eth1Deposits", "/validators/eth1leaderboard", "Eth1 Deposits")
-	data.HeaderAd = true
+	data.HeaderAd = false
+	data.Meta.Title = "Ethereum 1.0 Deposits Leaderboard"
+	data.Meta.Description = "The table displays the leaderboard for deposits made by Eth1 Addresses to the Deposit Contract"
 
 	data.Data = types.EthOneDepositLeaderBoardPageData{
 		DepositContract: utils.Config.Eth1DepositContractAddress,

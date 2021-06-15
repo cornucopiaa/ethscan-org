@@ -61,6 +61,8 @@ func Dashboard(w http.ResponseWriter, r *http.Request) {
 	data := InitPageData(w, r, "dashboard", "/dashboard", "Dashboard")
 	data.HeaderAd = true
 	data.Data = dashboardData
+	data.Meta.Title = "ETH 2.0 Dashboard - Monitor Validators, Addresses and Graffiti"
+	data.Meta.Description = "Add a Validator, Graffiti, or ETH2 Addresses and track the latest activity, monitor total balance and average effectiveness."
 
 	err := dashboardTemplate.ExecuteTemplate(w, "layout", data)
 	if err != nil {

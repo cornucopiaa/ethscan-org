@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 )
 
 var validatorsTemplate = template.Must(template.New("validators").Funcs(utils.GetTemplateFuncs()).ParseFiles("templates/layout.html", "templates/validators.html"))
@@ -64,6 +65,11 @@ func Validators(w http.ResponseWriter, r *http.Request) {
 	data := InitPageData(w, r, "validators", "/validators", "Validators")
 	data.HeaderAd = true
 	data.Data = validatorsPageData
+	data.Meta.Title = fmt.Sprintf(
+		"Ethereum 2.0 Validators List as of %v %v",
+		time.Now().Month().String(),
+		time.Now().Year())
+	data.Meta.Description = "In this section we store the list of ETH 2.0 validators. Check their public key or  balance and get data on the latest activity in the blink of an eye."
 
 	err = validatorsTemplate.ExecuteTemplate(w, "layout", data)
 

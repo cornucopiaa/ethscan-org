@@ -19,7 +19,8 @@ func Blocks(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 
 	data := InitPageData(w, r, "blocks", "/blocks", "Blocks")
-
+	data.Meta.Title = "Ethereum 2.0 Blocks List - Sort by Epoch, Slot, and Status"
+	data.Meta.Description = "Search ETH 2.0 blocks and sort them in an easy-to-use interface. Find any block's Epoch, Slot, Status, Proposer and the number of attestations in the slot."
 	err := blocksTemplate.ExecuteTemplate(w, "layout", data)
 
 	if err != nil {

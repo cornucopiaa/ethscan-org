@@ -24,6 +24,8 @@ func Vis(w http.ResponseWriter, r *http.Request) {
 
 	data := InitPageData(w, r, "stats", "/vis", "Visualizations")
 	data.HeaderAd = true
+	data.Meta.Title = "Ethereum 2.0 Blockchain Visualization"
+	data.Meta.Description = "In this section you can see the ETH2 Blockchain visualization in real-time with blocks and validators involved."
 
 	err = visTemplate.ExecuteTemplate(w, "layout", data)
 

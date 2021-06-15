@@ -12,7 +12,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/juliangruber/go-intersect"
 
@@ -47,10 +46,12 @@ func Block(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := InitPageData(w, r, "blocks", "/blocks", "")
+	data.Meta.Title = fmt.Sprintf("ETH2 Block %v - Check Status and Stats", slotOrHash)
+	data.Meta.Description = fmt.Sprintf("All the information about ETH2 block %v. Check the slot, status, and proposer signature of Block %v in real-time.",
+		slotOrHash, slotOrHash)
+	data.Meta.Path = "/block/" + slotOrHash
 
 	if err != nil {
-		data.Meta.Title = fmt.Sprintf("%v - Slot %v - ethscan.org - %v", utils.Config.Frontend.SiteName, slotOrHash, time.Now().Year())
-		data.Meta.Path = "/block/" + slotOrHash
 		logger.Errorf("error retrieving block data: %v", err)
 		err = blockNotFoundTemplate.ExecuteTemplate(w, "layout", data)
 
@@ -92,7 +93,6 @@ func Block(w http.ResponseWriter, r *http.Request) {
 		blockSlot, blockRootHash)
 
 	if err != nil {
-		data.Meta.Title = fmt.Sprintf("%v - Slot %v - ethscan.org - %v", utils.Config.Frontend.SiteName, slotOrHash, time.Now().Year())
 		data.Meta.Path = "/block/" + slotOrHash
 		logger.Errorf("error retrieving block data: %v", err)
 		err = blockNotFoundTemplate.ExecuteTemplate(w, "layout", data)
@@ -104,9 +104,6 @@ func Block(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-
-	data.Meta.Title = fmt.Sprintf("%v - Slot %v - ethscan.org - %v", utils.Config.Frontend.SiteName, blockPageData.Slot, time.Now().Year())
-	data.Meta.Path = fmt.Sprintf("/block/%v", blockPageData.Slot)
 
 	blockPageData.Ts = utils.SlotToTime(blockPageData.Slot)
 	blockPageData.SlashingsCount = blockPageData.AttesterSlashingsCount + blockPageData.ProposerSlashingsCount

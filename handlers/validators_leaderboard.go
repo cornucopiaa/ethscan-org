@@ -20,6 +20,8 @@ func ValidatorsLeaderboard(w http.ResponseWriter, r *http.Request) {
 
 	data := InitPageData(w, r, "validators", "/validators/leaderboard", "Validator Staking Leaderboard")
 	data.HeaderAd = true
+	data.Meta.Title = "Ethereum 2.0 Validators Leaderboard"
+	data.Meta.Description = "The list of biggest ETH2 validators ordered by the 7-day income."
 
 	err := validatorsLeaderboardTemplate.ExecuteTemplate(w, "layout", data)
 

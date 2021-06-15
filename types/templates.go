@@ -66,6 +66,7 @@ type Meta struct {
 	Tlabel2     string
 	Tdata2      string
 	GATag       string
+	H1          string
 }
 
 // LatestState is a struct to hold data for the banner
@@ -687,6 +688,7 @@ type GenericChartData struct {
 	DataLabelsEnabled               bool
 	DataLabelsFormatter             template.JS
 	PlotOptionsSeriesCursor         string
+	H1                              string
 	Title                           string                    `json:"title"`
 	Subtitle                        string                    `json:"subtitle"`
 	XAxisTitle                      string                    `json:"x_axis_title"`

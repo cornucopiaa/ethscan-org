@@ -28,6 +28,8 @@ func StakingCalculator(w http.ResponseWriter, r *http.Request) {
 
 	data := InitPageData(w, r, "stats", "/calculator", "Staking calculator")
 	data.Data = calculatorPageData
+	data.Meta.Title = "ETH2 Staking Calculator"
+	data.Meta.Description = "Calculate your estimated rewards based on the amount of ETH you want to use for staking."
 
 	// stakingCalculatorTemplate = template.Must(template.New("staking_estimator").Funcs(utils.GetTemplateFuncs()).ParseFiles("templates/layout.html", "templates/calculator.html"))
 	err = stakingCalculatorTemplate.ExecuteTemplate(w, "layout", data)

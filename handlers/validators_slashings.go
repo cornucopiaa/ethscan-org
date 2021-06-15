@@ -20,6 +20,8 @@ func ValidatorsSlashings(w http.ResponseWriter, r *http.Request) {
 
 	data := InitPageData(w, r, "validators", "/validators/slashings", "Validator Slashings")
 	data.HeaderAd = true
+	data.Meta.Title = "List of Slashed ETH2 Validators"
+	data.Meta.Description = "Check the list of slashed validators and see their stats, who slashed them and why."
 
 	err := validatorsSlashingsTemplate.ExecuteTemplate(w, "layout", data)
 

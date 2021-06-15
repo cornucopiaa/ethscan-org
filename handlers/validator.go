@@ -53,7 +53,8 @@ func Validator(w http.ResponseWriter, r *http.Request) {
 	validatorPageData := types.ValidatorPageData{}
 
 	data := InitPageData(w, r, "validators", "/validators", "")
-	data.HeaderAd = true
+	data.HeaderAd = false
+
 	validatorPageData.NetworkStats = services.LatestIndexPageData()
 	validatorPageData.User = data.User
 
@@ -87,8 +88,6 @@ func Validator(w http.ResponseWriter, r *http.Request) {
 			}
 			validatorPageData.DepositsCount = uint64(len(deposits.Eth1Deposits))
 			if err != nil || len(deposits.Eth1Deposits) == 0 {
-				data.Meta.Title = fmt.Sprintf("%v - Validator %x - ethscan.org - %v", utils.Config.Frontend.SiteName, pubKey, time.Now().Year())
-				data.Meta.Path = fmt.Sprintf("/validator/%v", index)
 				err := validatorNotFoundTemplate.ExecuteTemplate(w, "layout", data)
 				if err != nil {
 					logger.Errorf("error executing template for %v route: %v", r.URL.String(), err)
@@ -200,8 +199,8 @@ func Validator(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// GetAvgOptimalInclusionDistance(index)
-
-	data.Meta.Title = fmt.Sprintf("%v - Validator %v - ethscan.org - %v", utils.Config.Frontend.SiteName, index, time.Now().Year())
+	data.Meta.Title = fmt.Sprintf("%v ETH2 Validator - Check Rank, Balance and Historical Data", index)
+	data.Meta.Description = fmt.Sprintf("%v  Here is everything there is to know about Validator %v on the Ethereum 2.0 network.", index, index)
 	data.Meta.Path = fmt.Sprintf("/validator/%v", index)
 
 	// logger.Infof("retrieving data, elapsed: %v", time.Since(start))

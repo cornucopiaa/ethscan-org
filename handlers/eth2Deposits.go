@@ -19,7 +19,9 @@ func Eth2Deposits(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 
 	data := InitPageData(w, r, "eth2Deposits", "/validators/eth2deposits", "Eth2 Deposits")
-	data.HeaderAd = true
+	data.HeaderAd = false
+	data.Meta.Title = "ETH2 Deposits List"
+	data.Meta.Description = "This section displays the deposits received by the Eth2 Beacon Chain."
 
 	err := eth2DepositsTemplate.ExecuteTemplate(w, "layout", data)
 
