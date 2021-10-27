@@ -361,3 +361,23 @@ main a:not(.btn):not(.page-link):not(.nav-link):not(.dropdown-item):not(.no-high
   width: 1.3rem;
   height: 1.3rem;
 }
+
+.svg-logo {
+  color: #000;
+  width: 120px;
+}
+[data-theme='dark'] .svg-logo {
+  color: #fff;
+}
+
+.slogan { color: #595458; font-size: 16px; margin-bottom: -16px; }
+.slogan .link { color: #000; font-weight: bold; }
+[data-theme='dark'] .slogan .link { color: #fff; }
+@media screen and (max-width: 639px){
+  .slogan { display: none; }
+}
+a.regular { background: none !important; }
+.mode-light { display: block; }
+.mode-dark { display: none; }
+[data-theme='dark'] .mode-light { display: none; }
+[data-theme='dark'] .mode-dark { display: block; }
