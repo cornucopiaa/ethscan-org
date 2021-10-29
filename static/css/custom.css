@@ -235,3 +235,7 @@ html[data-theme='light'] .slider {
 html[data-theme='light'] main .container:nth-child(2) p {
     color: #636972;
 }
+
+html[data-theme='light'] main .container:nth-child(2) li {
+    color: #636972;
+}
