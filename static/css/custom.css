@@ -85,6 +85,13 @@ main .container:nth-child(2) a:not(.nav-link) {
     color: #5389D0;
 }
 
+html[data-theme='dark'] .page-item > a {
+    background-color: #2d3a6b;
+}
+
+html[data-theme='dark'] .validator-content .text-white {
+    color: #000 !important;
+}
 
 html[data-theme='dark'] .table thead th {
     color: #C4C4C4;
@@ -158,7 +165,7 @@ html[data-theme="dark"] .form-control {
 
 html[data-theme="dark"] .paginate_button,
 html[data-theme="dark"] .page-link {
-    background-color: #2D3A6B;
+    background-color: transparent;
 }
 
 html[data-theme="dark"] .paginate_input {
