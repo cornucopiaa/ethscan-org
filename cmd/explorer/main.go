@@ -2,6 +2,11 @@ package main
 
 import (
 	"encoding/hex"
+	"flag"
+	"net/http"
+	"os"
+	"time"
+
 	"eth2-exporter/db"
 	ethclients "eth2-exporter/ethClients"
 	"eth2-exporter/handlers"
@@ -9,10 +14,7 @@ import (
 	"eth2-exporter/services"
 	"eth2-exporter/types"
 	"eth2-exporter/utils"
-	"flag"
-	"net/http"
-	"os"
-	"time"
+	"github.com/gorilla/csrf"
 
 	httpSwagger "github.com/swaggo/http-swagger"
 	"gopkg.in/yaml.v2"
@@ -21,7 +23,6 @@ import (
 
 	_ "eth2-exporter/docs"
 
-	"github.com/gorilla/csrf"
 	"github.com/gorilla/mux"
 	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/phyber/negroni-gzip/gzip"
@@ -95,6 +96,9 @@ func main() {
 		apiV1Router.HandleFunc("/validator/{indexOrPubkey}/attestations", handlers.ApiValidatorAttestations).Methods("GET", "OPTIONS")
 		apiV1Router.HandleFunc("/validator/{indexOrPubkey}/proposals", handlers.ApiValidatorProposals).Methods("GET", "OPTIONS")
 		apiV1Router.HandleFunc("/validator/{indexOrPubkey}/deposits", handlers.ApiValidatorDeposits).Methods("GET", "OPTIONS")
+		apiV1Router.HandleFunc("/validator/{indexOrPubkey}/attestationefficiency", handlers.ApiValidatorAttestationEfficiency).Methods("GET", "OPTIONS")
+		apiV1Router.HandleFunc("/validator/stats/{index}", handlers.ApiValidatorDailyStats).Methods("GET", "OPTIONS")
+		apiV1Router.HandleFunc("/validator/{indexOrPubkey}/stats/", handlers.ApiValidatorDailyStats).Methods("GET", "OPTIONS")
 		apiV1Router.HandleFunc("/validator/eth1/{address}", handlers.ApiValidatorByEth1Address).Methods("GET", "OPTIONS")
 		apiV1Router.HandleFunc("/chart/{chart}", handlers.ApiChart).Methods("GET", "OPTIONS")
 		apiV1Router.HandleFunc("/user/token", handlers.APIGetToken).Methods("POST", "OPTIONS")
@@ -175,6 +179,7 @@ func main() {
 			router.HandleFunc("/validator/{pubkey}/save", handlers.ValidatorSave).Methods("POST")
 			router.HandleFunc("/validator/{pubkey}/add", handlers.UserValidatorWatchlistAdd).Methods("POST")
 			router.HandleFunc("/validator/{pubkey}/remove", handlers.UserValidatorWatchlistRemove).Methods("POST")
+			router.HandleFunc("/validator/{index}/stats", handlers.ValidatorStatsTable).Methods("GET")
 			router.HandleFunc("/validators", handlers.Validators).Methods("GET")
 			router.HandleFunc("/validators/data", handlers.ValidatorsData).Methods("GET")
 			router.HandleFunc("/validators/slashings", handlers.ValidatorsSlashings).Methods("GET")
@@ -232,8 +237,8 @@ func main() {
 			signUpRouter.HandleFunc("/reset/{hash}", handlers.ResetPassword).Methods("GET")
 			signUpRouter.HandleFunc("/confirm/{hash}", handlers.ConfirmEmail).Methods("GET")
 			signUpRouter.HandleFunc("/confirmation", handlers.Confirmation).Methods("GET")
-			// signUpRouter.HandleFunc("/pricing", handlers.Pricing).Methods("GET")
-			// signUpRouter.HandleFunc("/pricing", handlers.PricingPost).Methods("POST")
+			//signUpRouter.HandleFunc("/pricing", handlers.Pricing).Methods("GET")
+			//signUpRouter.HandleFunc("/pricing", handlers.PricingPost).Methods("POST")
 			signUpRouter.Use(csrfHandler)
 
 			oauthRouter := router.PathPrefix("/user").Subrouter()
@@ -253,6 +258,7 @@ func main() {
 			authRouter.HandleFunc("/notifications/unsubscribe", handlers.UserNotificationsUnsubscribe).Methods("POST")
 			authRouter.HandleFunc("/subscriptions/data", handlers.UserSubscriptionsData).Methods("GET")
 			authRouter.HandleFunc("/generateKey", handlers.GenerateAPIKey).Methods("POST")
+			authRouter.HandleFunc("/ethClients", handlers.EthClientsServices).Methods("GET")
 
 			authRouter.Use(handlers.UserAuthMiddleware)
 			authRouter.Use(csrfHandler)

@@ -365,6 +365,7 @@ func Validator(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Internal server error", 503)
 		return
 	}
+	//logger.Infof("lastStatsDay retrieved, elapsed: %v", time.Since(start))
 
 	if validatorPageData.AttestationsCount > 0 {
 		// get attestationStats from validator_stats
@@ -373,12 +374,13 @@ func Validator(w http.ResponseWriter, r *http.Request) {
 			OrphanedAttestations uint64 `db:"orphaned_attestations"`
 		}{}
 		if lastStatsDay > 0 {
-			err = db.DB.Get(&attestationStats, "select 0 as missed_attestations, 0 as orphaned_attestations")
+			err = db.DB.Get(&attestationStats, "select coalesce(sum(missed_attestations), 0) as missed_attestations, coalesce(sum(orphaned_attestations), 0) as orphaned_attestations from validator_stats where validatorindex = $1", index)
 			if err != nil {
 				logger.Errorf("error retrieving validator attestationStats: %v", err)
 				http.Error(w, "Internal server error", 503)
 				return
 			}
+			//logger.Infof("validatorPageData.AttestationsCount > 0 retrieved, elapsed: %v", time.Since(start))
 		}
 
 		// add attestationStats that are not yet in validator_stats
@@ -386,12 +388,13 @@ func Validator(w http.ResponseWriter, r *http.Request) {
 			MissedAttestations   uint64 `db:"missed_attestations"`
 			OrphanedAttestations uint64 `db:"orphaned_attestations"`
 		}{}
-		err = db.DB.Get(&attestationStatsNotInStats, "select 0 as missed_attestations, 0 as orphaned_attestations")
+		err = db.DB.Get(&attestationStatsNotInStats, "select coalesce(sum(case when status = 0 then 1 else 0 end), 0) as missed_attestations, coalesce(sum(case when status = 3 then 1 else 0 end), 0) as orphaned_attestations from attestation_assignments_p where week >= $1/7 and epoch >= ($1+1)*225 and epoch < $2 and validatorindex = $3", lastStatsDay, services.LatestEpoch(), index)
 		if err != nil {
 			logger.Errorf("error retrieving validator attestationStatsAfterLastStatsDay: %v", err)
 			http.Error(w, "Internal server error", 503)
 			return
 		}
+		//logger.Infof("attestationStatsNotInStats retrieved, elapsed: %v", time.Since(start))
 		validatorPageData.MissedAttestationsCount = attestationStats.MissedAttestations + attestationStatsNotInStats.MissedAttestations
 		validatorPageData.OrphanedAttestationsCount = attestationStats.OrphanedAttestations + attestationStatsNotInStats.OrphanedAttestations
 		validatorPageData.ExecutedAttestationsCount = validatorPageData.AttestationsCount - validatorPageData.MissedAttestationsCount - validatorPageData.OrphanedAttestationsCount
