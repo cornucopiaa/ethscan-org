@@ -1,5 +1,5 @@
 # The dockerfile is currently still WIP and might be broken
-FROM golang:1.15-alpine AS build-env
+FROM golang:1.18-alpine AS build-env
 RUN apk --no-cache add build-base git musl-dev linux-headers npm
 WORKDIR /src/
 ADD go.mod go.sum ./
