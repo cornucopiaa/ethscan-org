@@ -39,7 +39,7 @@ func Index(w http.ResponseWriter, r *http.Request) {
 	data.Data.(*types.IndexPageData).ShowSyncingMessage = data.ShowSyncingMessage
 
 	data.Meta.Title = "Ethereum 2.0 Blockchain Explorer - ETH 2.0 Search Engine"
-	data.Meta.Description = "Ethscan allows you to check your balance, browse blocks, search for transactions, and explore everything that is going on in the Ethereum 2.0 network."
+	data.Meta.Description = "Ethscan’s Ethereum 2.0 blockchain explorer helps with past and real-time data. The explorer searches the ETH 2.0 blockchain for information on blocks, addresses, and epochs."
 
 	err := indexTemplate.ExecuteTemplate(w, "layout", data)
 

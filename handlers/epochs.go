@@ -21,8 +21,8 @@ func Epochs(w http.ResponseWriter, r *http.Request) {
 
 	data := InitPageData(w, r, "epochs", "/epochs", "Epochs")
 	data.HeaderAd = false
-	data.Meta.Title = "Ethereum 2.0 Epochs List - Statuses, Attestations, and Deposits"
-	data.Meta.Description = "All Ethereum 2.0 epochs in one place. Check the status and stats of any ETH 2.0 epoch in a friendly and easy-to-use interface."
+	data.Meta.Title = "Ethereum 2.0 Epochs | Ethscan.org"
+	data.Meta.Description = "Ethscan’s chain explorer can help you understand ETH2 chain data, including Ethereum epochs and all that’s happening on Ethereum epochs now."
 
 	err := epochsTemplate.ExecuteTemplate(w, "layout", data)
 
