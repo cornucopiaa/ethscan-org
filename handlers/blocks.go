@@ -20,7 +20,7 @@ func Blocks(w http.ResponseWriter, r *http.Request) {
 
 	data := InitPageData(w, r, "blocks", "/blocks", "Blocks")
 	data.Meta.Title = "Ethereum 2.0 Blocks List - Sort by Epoch, Slot, and Status"
-	data.Meta.Description = "Search ETH 2.0 blocks and sort them in an easy-to-use interface. Find any block's Epoch, Slot, Status, Proposer and the number of attestations in the slot."
+	data.Meta.Description = "Ethscan's Ethereum block explorer provides real-time data. With the Ether scanner, you can search Ether blocks, addresses, and epochs on the Ethereum blockchain."
 	err := blocksTemplate.ExecuteTemplate(w, "layout", data)
 
 	if err != nil {

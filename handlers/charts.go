@@ -54,8 +54,8 @@ func getChartMeta(chartVar string) (string, string) {
 		return "ETH2 and ETH1 Daily Deposit Chart",
 			"This chart illustrates the daily amount of deposited ETH."
 	default:
-		return "Ethereum 2.0 Network Charts",
-			"Ethereum 2.0 highlights visualized as charts that showcase the latest network stats."
+		return "Ethereum 2.0 Network Charts | Ethscan.org",
+			"Ethereum chart shows Ethereum statistics, ETH2 validator data and other info pertaining to Ethereum network. Ether chart for professionals and beginners."
 	}
 }
 
@@ -180,8 +180,8 @@ func GenericChart(w http.ResponseWriter, r *http.Request) {
 func SlotViz(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 	data := InitPageData(w, r, "stats", "/charts", "Charts")
-	data.Meta.Title = "Ethereum 2.0 Network Charts"
-	data.Meta.Description = "Ethereum 2.0 highlights visualized as charts that showcase the latest network stats."
+	data.Meta.Title = "Ethereum 2.0 Network Charts | Ethscan.org"
+	data.Meta.Description = "Ethereum chart shows Ethereum statistics, ETH2 validator data and other info pertaining to Ethereum network. Ether chart for professionals and beginners."
 
 	data.Data = nil
 	err := slotVizTemplate.ExecuteTemplate(w, "layout", data)
