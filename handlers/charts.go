@@ -180,7 +180,7 @@ func GenericChart(w http.ResponseWriter, r *http.Request) {
 func SlotViz(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 	data := InitPageData(w, r, "stats", "/charts", "Charts")
-	data.Meta.Title = "Ethereum 2.0 Blocks List | Ethscan.org"
+	data.Meta.Title = "Ethereum 2.0 Network Charts | Ethscan.org"
 	data.Meta.Description = "Ethereum chart shows Ethereum statistics, ETH2 validator data and other info pertaining to Ethereum network. Ether chart for professionals and beginners."
 
 	data.Data = nil
