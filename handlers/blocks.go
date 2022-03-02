@@ -19,7 +19,7 @@ func Blocks(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 
 	data := InitPageData(w, r, "blocks", "/blocks", "Blocks")
-	data.Meta.Title = "Ethereum 2.0 Blocks List - Sort by Epoch, Slot, and Status"
+	data.Meta.Title = "Ethereum 2.0 Blocks List | Ethscan.org"
 	data.Meta.Description = "Ethscan's Ethereum block explorer provides real-time data. With the Ether scanner, you can search Ether blocks, addresses, and epochs on the Ethereum blockchain."
 	err := blocksTemplate.ExecuteTemplate(w, "layout", data)
 
