@@ -820,10 +820,10 @@
             <div class="row my-3">
                 <div class="col-xl-4 col-md-5 col-sm-12 py-3 variables">
                     <div class="stake">
-                        <h5 class="mb-0">Your Ethereum Stake <span id="yourStake-currency">ETH</span> <i
+                        <p class="mb-0">Your Ethereum Stake <span id="yourStake-currency">ETH</span> <i
                                     class="fas fa-info-circle fa-sm" data-toggle="tooltip"
                                     title="This value represents the amount of ETH you want to use for stacking. If you are not staking on a pool it must be a multiple of 32, since validators can only join the network with a minimum of 32 ETH."></i>
-                        </h5>
+                        </p>
                         <div class="justify-content-between d-flex p-3 pb-0 align-content-center">
                             <input id="staking-variable-yourStake" class="staking-variable form-control col-6"
                                    type="text" value=32>
@@ -847,7 +847,7 @@
                                  data-target="#economic-heading">
                                 <div class="p-3 settings">
                                     <div class="setting">
-                                        <h6>Select Currency</h6>
+                                        <p>Select Currency</p>
                                         <div class="dropdown mb-1 currency-dropdown">
                                             <button class="form-control w-100 text-left dropdown-toggle"
                                                     data-toggle="dropdown" id="currencyDropdown" aria-haspopup="true"
@@ -902,20 +902,20 @@
                                         <span id="staking-variable-price-validation" class="input-validation">Ethereum price must be greater than 0</span>
                                     </div>
                                     <div class="setting">
-                                        <h6>Monthly price change in %</h6>
+                                        <p>Monthly price change in %</p>
                                         <input id="staking-variable-priceChangePerMonth"
                                                class="staking-variable form-control" type="text" value=0>
                                         <span id="staking-variable-priceChangePerMonth-validation"
                                               class="input-validation">Ethereum price change must be a percentage greater or equal to 0</span>
                                     </div>
                                     <div class="setting">
-                                        <h6>Initial one-time-costs in <span class="currency-key">USD</span></h6>
+                                        <p>Initial one-time-costs in <span class="currency-key">USD</span></p>
                                         <input id="staking-variable-initialCosts"
                                                class="staking-variable form-control noPool" type="text" value=0>
                                         <span id="staking-variable-initialCosts-validation" class="input-validation">Initial costs must be greater or equal to 0</span>
                                     </div>
                                     <div class="setting">
-                                        <h6>Monthly costs in <span class="currency-key">USD</span></h6>
+                                        <p>Monthly costs in <span class="currency-key">USD</span></p>
                                         <input id="staking-variable-monthlyCosts"
                                                class="staking-variable form-control noPool" type="text" value=0>
                                         <span id="staking-variable-monthlyCosts-validation" class="input-validation">Monthly costs must be greater or equal to 0</span>
@@ -932,17 +932,17 @@
                                  data-target="#pool-heading">
                                 <div class="p-3 settings">
                                     <div class="setting">
-                                        <h6>Staking fee % <i class="fas fa-info-circle fa-sm" data-toggle="tooltip"
+                                        <p>Staking fee % <i class="fas fa-info-circle fa-sm" data-toggle="tooltip"
                                                              title="If you are staking on a pool enter the fee of the pool here. If you are not staking on a pool, just set it to 0."></i>
-                                        </h6>
+                                        </p>
                                         <input id="staking-variable-stakingFee"
                                                class="staking-variable form-control pool" type="text" value=0>
                                         <span id="staking-variable-stakingFee-validation" class="input-validation">Staking fee must be between 0 and 100</span>
                                     </div>
                                     <div class="setting mb-2">
-                                        <h6>Reinvest gains <i class="fas fa-info-circle fa-sm" data-toggle="tooltip"
+                                        <p>Reinvest gains <i class="fas fa-info-circle fa-sm" data-toggle="tooltip"
                                                               title="Setting this field will add your staking-income to your initial stake after each epoch. This will only work if you are staking on a pool."></i>
-                                        </h6>
+                                        </p>
                                         <div class="form-group form-check pb-1">
                                             <input style="width: 1rem; height:1rem;" id="staking-variable-reinvest"
                                                    class="staking-variable form-check-input pool" type="checkbox">
@@ -963,10 +963,10 @@
                                 <div class="p-3 settings">
                                     <div class="setting">
                                         <div class="d-flex justify-content-between">
-                                            <h6 width="50%">Total staked ether <span id="totalStake-currency">ETH</span>
+                                            <p width="50%">Total staked ether <span id="totalStake-currency">ETH</span>
                                                 <i class="fas fa-info-circle fa-sm" data-toggle="tooltip"
                                                    title="Total staked ether is the sum of effective balances of all active validators attesting in the network."></i>
-                                            </h6>
+                                            </p>
                                             <span id="staking-variable-totalStake-percentage"></span>
                                         </div>
                                         <input id="staking-variable-totalStake" class="staking-variable form-control"
@@ -976,9 +976,9 @@
                                         <span id="staking-variable-totalStake-validation" class="input-validation">Total stake must be greater or equal to 524384 (minimum stake required)</span>
                                     </div>
                                     <div class="setting">
-                                        <h6>Churn rate % <i class="fas fa-info-circle fa-sm" data-toggle="tooltip"
+                                        <p>Churn rate % <i class="fas fa-info-circle fa-sm" data-toggle="tooltip"
                                                             title="The churn rate indicates how many validators join or leave the network. A positive value would indicate a net increase in the number of staking validators."></i>
-                                        </h6>
+                                        </p>
                                         <input id="staking-variable-totalStakeMonthlyChange"
                                                class="staking-variable form-control" type="text" value=0>
                                         <input id="staking-variable-totalStakeMonthlyChange-slider" class="form-control"
@@ -987,10 +987,10 @@
                                               class="input-validation">The churn rate must be percentage between -100 and 100</span>
                                     </div>
                                     <div class="setting">
-                                        <h6>Online probability % <i class="fas fa-info-circle fa-sm"
+                                        <p>Online probability % <i class="fas fa-info-circle fa-sm"
                                                                     data-toggle="tooltip"
                                                                     title="Online probability is the average probability of all active validators to be online and to fulfill their duties."></i>
-                                        </h6>
+                                        </p>
                                         <input id="staking-variable-onlineProbability"
                                                class="staking-variable form-control" type="text" value=90>
                                         <input id="staking-variable-onlineProbability-slider" class="form-control"
