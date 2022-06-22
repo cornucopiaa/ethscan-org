@@ -17,7 +17,7 @@ import (
 // It will use smtp if configured otherwise it will use gunmail if configured.
 func SendMail(to, subject, msg string) error {
 	var err error
-	if utils.Config.Frontend.Mail.SMTP.User != "" {
+	if utils.Config.Frontend.Mail.SMTP.Host != "" {
 		err = SendMailSMTP(to, subject, msg)
 	} else if utils.Config.Frontend.Mail.Mailgun.PrivateKey != "" {
 		err = SendMailMailgun(to, subject, msg)
@@ -62,8 +62,12 @@ func SendMailSMTP(to, subject, body string) error {
 	host := utils.Config.Frontend.Mail.SMTP.Host     // eg. smtp.gmail.com
 	user := utils.Config.Frontend.Mail.SMTP.User     // eg. userxyz123@gmail.com
 	password := utils.Config.Frontend.Mail.SMTP.Password
+	from := utils.Config.Frontend.Mail.SMTP.From // "no-reply@eth2.redot.com"
+
 	auth := smtp.PlainAuth("", user, password, host)
-	from := "no-reply@eth2.redot.com"
+	if len(user) == 0 {
+		auth = nil
+	}
 	msg := []byte(fmt.Sprintf("To: %s\r\nSubject: %s\r\n\r\n%s\r\n", to, subject, body))
 
 	err := smtp.SendMail(server, auth, from, []string{to}, msg)

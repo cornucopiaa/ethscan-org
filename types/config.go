@@ -71,6 +71,7 @@ type Config struct {
 		Mail                   struct {
 			SMTP struct {
 				Server   string `yaml:"server" envconfig:"FRONTEND_MAIL_SMTP_SERVER"`
+				From     string `yaml:"from" envconfig:"FRONTEND_MAIL_SMTP_FROM"`
 				Host     string `yaml:"host" envconfig:"FRONTEND_MAIL_SMTP_HOST"`
 				User     string `yaml:"user" envconfig:"FRONTEND_MAIL_SMTP_USER"`
 				Password string `yaml:"password" envconfig:"FRONTEND_MAIL_SMTP_PASSWORD"`
